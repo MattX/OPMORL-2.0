@@ -10,6 +10,17 @@
 #include "opmorl.h"
 
 
+/* Map generator parameters */
+
+const int max_rooms = 7;
+const int min_rooms = 5;
+
+// Including walls
+const int max_size_x = 8;
+const int min_size_x = 4;
+const int max_size_y = 15;
+const int min_size_y = 3;
+
 /*
  * Finds a random tile on the specified map level. If can_have_mon is false, the returned
  * tile will not have a monster on it. The tile will be of one of types specified in
@@ -105,17 +116,15 @@ void make_corridor(int level, int from_x, int from_y, int to_x, int to_y)
         int y_target = cur_y + min(y_span, to_y - cur_y);
 
         int x_span = rand_int(total_x_span / 16, total_x_span / 4);
-        int x_increment = sign(to_x - cur_x);
         int x_target;
 
-        if (x_increment == 1) {
-            x_target = cur_x + min(x_span, to_x - cur_x);
+        if (y_target == to_y) {
+            // Just finish off in the X direction
+            x_target = to_x;
+        } else if (cur_x < to_x) {
+            x_target = cur_x + x_span;
         } else {
-            // If we're going down, we'll draw the line from x_target to cur_x instead.
-            x_target = cur_x - min(x_span, cur_x - to_x);
-            int tmp = cur_x;
-            cur_x = x_target;
-            x_target = tmp;
+            x_target = cur_x - x_span;
         }
 
         for (int i_y = cur_y; i_y <= y_target; i_y++)
@@ -123,15 +132,8 @@ void make_corridor(int level, int from_x, int from_y, int to_x, int to_y)
                 lvl_map[level][cur_x][i_y] = T_CORRIDOR;
 
         cur_y = y_target;
-        if (cur_y == to_y) {
-            // Just finish off the X direction
-            if (x_increment == 1)
-                x_target = to_x;
-            else
-                cur_x = to_x;
-        }
 
-        for (int i_x = cur_x; i_x <= x_target; i_x++)
+        for (int i_x = min(cur_x, x_target); i_x <= max(cur_x, x_target); i_x++)
             if (lvl_map[level][i_x][cur_y] & ~T_WALKABLE)
                 lvl_map[level][i_x][cur_y] = T_CORRIDOR;
 
@@ -143,12 +145,37 @@ void make_corridor(int level, int from_x, int from_y, int to_x, int to_y)
 void create_level(int level)
 {
     int i_x, i_y;
+
+    // Fill everything with ground
     for (i_x = 0; i_x < LEVEL_HEIGHT; i_x++) {
         for (i_y = 0; i_y < LEVEL_WIDTH; i_y++) {
             lvl_map[level][i_x][i_y] = T_GROUND;
         }
     }
 
+    // Generate some rooms
+    int rooms_x[max_rooms], rooms_y[max_rooms]; // for room centers
+    int nb_rooms = rand_int(min_rooms, max_rooms);
+
+    for (int i = 0; i < nb_rooms; i++) {
+        int room_size_x = rand_int(min_size_x, max_size_x);
+        int room_size_y = rand_int(min_size_y, max_size_y);
+        int room_x = rand_int(0, LEVEL_HEIGHT - room_size_x - 1);
+        int room_y = rand_int(0, LEVEL_WIDTH - room_size_y - 1);
+
+        make_room(level, room_x, room_x + room_size_x, room_y, room_y + room_size_y);
+
+        rooms_x[i] = room_x + room_size_x / 2;
+        rooms_y[i] = room_y + room_size_y / 2;
+    }
+
+    // Connect rooms
+    for (int i = 1; i < nb_rooms; i++) {
+        int target_room = rand_int(0, i - 1);
+        make_corridor(level, rooms_x[i], rooms_y[i], rooms_x[target_room], rooms_y[target_room]);
+    }
+
+    // Add stairs
     if (level != LEVELS - 1) {
         if (!find_floor_tile(level, &i_x, &i_y, T_FLOOR, 1))
             print_to_log("Could not place stairs down!\n");

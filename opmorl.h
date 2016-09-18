@@ -16,6 +16,7 @@
 #include <string.h>
 #include <math.h>
 #include <time.h>
+#include <stdbool.h>
 
 #include <ncurses.h>
 
@@ -41,8 +42,9 @@
 
 
 typedef enum {
-	CLR_DEFAULT, /* COLOR_PAIR(0) is the default back/fore ground colors */
-	CLR_WHITE
+    CLR_DEFAULT = 0, /* COLOR_PAIR(0) is the default back/fore ground colors */
+    CLR_WHITE = 1,
+    CLR_YELLOW = 2
 } Color;
 /* Here we have stuff like CLR_ORANGE or whatever, that we have initialized in init_color, and then we	*
  * just have, before printing a monster/object, to call attron(COLOR_PAIR(obj->color)); and attroff().	*/

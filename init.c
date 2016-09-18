@@ -32,6 +32,7 @@ void init_colors() {
 	start_color();
 	use_default_colors();
 	init_pair(CLR_WHITE, COLOR_WHITE, DEFAULT_BACKCOLOR); /* broken by the enum, wtf */
+    init_pair(CLR_YELLOW, COLOR_YELLOW, DEFAULT_BACKCOLOR);
 	/* et alii colori */
 }
 
