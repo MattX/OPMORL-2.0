@@ -104,9 +104,11 @@ typedef enum {
     T_FLOOR = 0x10,
     T_STAIRS_UP = 0x20,
     T_STAIRS_DOWN = 0x40,
+    T_GROUND = 0x80,
 } TileType;
 
 #define T_ANY (~0)
+#define T_WALKABLE (T_CORRIDOR | T_OPEN_DOOR | T_FLOOR | T_STAIRS_UP | T_STAIRS_DOWN)
 
 typedef enum {
 	C_SAMURAI,
@@ -159,6 +161,12 @@ Monster *find_mon_at(int, int, int);
 Object *find_obj_at(int, int, int);
 
 int rand_int(int, int);
+
+int min(int, int);
+
+int max(int, int);
+
+int sign(int);
 
 int move_rodney(int, int);
 

@@ -14,7 +14,7 @@ int move_rodney(int newx, int newy)
     if (newx < 0 || newy < 0 || newx >= LEVEL_HEIGHT || newy >= LEVEL_WIDTH)
         return 0;
 
-    if (lvl_map[rodney.dlvl][newx][newy] & (T_WALL | T_CLOSED_DOOR))
+    if (lvl_map[rodney.dlvl][newx][newy] & ~T_WALKABLE)
         return 0;
 
 	rodney.posx = newx;

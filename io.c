@@ -51,6 +51,10 @@ void display_map()
                 break;
             case T_STAIRS_DOWN:
                 mvaddch(i + 1, j, '>');
+                break;
+            case T_GROUND:
+                mvaddch(i + 1, j, ' ');
+                break;
             }
         }
     }

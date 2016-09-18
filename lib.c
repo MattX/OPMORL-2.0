@@ -19,6 +19,29 @@ int rand_int(int min, int max)
     return rand() % (max - min + 1) + min;
 }
 
+int min(int a, int b)
+{
+    return a > b ? b : a;
+}
+
+int max(int a, int b)
+{
+    return a > b ? a : b;
+}
+
+int abs(int a)
+{
+    return a < 0 ? -a : a;
+}
+
+int sign(int a)
+{
+    if (a >= 0)
+        return 1;
+    else
+        return -1;
+}
+
 void add_object(Object *obj)
 {
     append(o_list, obj);
@@ -36,9 +59,9 @@ Monster *find_mon_at(int x, int y, int level)
     if (!mon_node)
         return NULL; /* Be careful with that one ! */
 
-    while(mon_node != NULL) {
+    while (mon_node != NULL) {
         Monster *mon = (Monster *) mon_node->element;
-        if(mon->posx == x && mon->posy == y && mon->level == level)
+        if (mon->posx == x && mon->posy == y && mon->level == level)
             return mon;
 
         mon_node = mon_node->next;
@@ -54,9 +77,9 @@ Object *find_obj_at(int x, int y, int level)
     if (!obj_node)
         return NULL; /* Be careful with that one ! */
 
-    while(obj_node != NULL) {
+    while (obj_node != NULL) {
         Object *obj = (Object *) obj_node->element;
-        if(obj->posx == x && obj->posy == y && obj->level == level)
+        if (obj->posx == x && obj->posy == y && obj->level == level)
             return obj;
 
         obj_node = obj_node->next;
@@ -69,7 +92,7 @@ void rm_mon_at(int x, int y, int level)
 {
     Monster *mon;
 
-    if((mon = find_mon_at(x, y, level)) == NULL)
+    if ((mon = find_mon_at(x, y, level)) == NULL)
         return;
 
     delete(m_list, mon);
@@ -79,7 +102,7 @@ void rm_obj_at(int x, int y, int level)
 {
     Object *obj;
 
-    if((obj = find_obj_at(x, y, level)) == NULL)
+    if ((obj = find_obj_at(x, y, level)) == NULL)
         return;
 
     delete(o_list, obj);

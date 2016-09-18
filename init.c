@@ -61,11 +61,7 @@ void init_game()
     rodney.dexterity = rand_int(12, 18);
     rodney.wisdom = rand_int(12, 18);
 
-    // TODO: place rodney on good tile
-    rodney.posx = rand_int(1, LEVEL_HEIGHT);
-    rodney.posy = rand_int(1, LEVEL_WIDTH);
     rodney.color = CLR_WHITE;
-    rodney.dlvl = 0;
 
     o_list = new_linked_list();
     m_list = new_linked_list();
@@ -75,4 +71,10 @@ void init_game()
 
     for (int i_level = 0; i_level < LEVELS; i_level++)
         create_level(i_level);
+
+    rodney.dlvl = 0;
+    if (!find_floor_tile(rodney.dlvl, &rodney.posx, &rodney.posy, T_WALKABLE, 0)) {
+        pline("Panic: Could not add Rodney!");
+        exit_game();
+    }
 }

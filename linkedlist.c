@@ -39,24 +39,15 @@ int is_empty(LinkedList *linked_list)
 }
 
 /*
- * Appends an element to a linked list. This will reset the current position in the
- * list.
+ * Adds an element to a linked list.
  */
 void append(LinkedList *linked_list, void *item)
 {
     LinkedListNode *cur = linked_list->head;
     LinkedListNode *new = malloc(sizeof(LinkedListNode));
     new->element = item;
-    new->next = NULL;
-
-    if(linked_list->head == NULL) {
-        linked_list->head = new;
-    }
-    else {
-        while(cur->next != NULL)
-            cur = cur->next;
-        cur->next = new;
-    }
+    new->next = linked_list->head;
+    linked_list->head = new;
 }
 
 /*
@@ -65,7 +56,7 @@ void append(LinkedList *linked_list, void *item)
 int delete(LinkedList *linked_list, void *item)
 {
     LinkedListNode *cur = linked_list->head;
-    LinkedListNode *prev = NULL;
+    LinkedListNode *prev = linked_list->head;
 
     if(linked_list->head == NULL)
         /* Tried to delete an element from an empty list */
