@@ -26,7 +26,7 @@ void game_loop() {
 }
 
 void init_game() {
-	srand(time(NULL));
+	srand((unsigned int)time(NULL));
 	rodney.pclass = C_WARRIOR;
 	rodney.gold = rodney.exp = 0;
 	rodney.explevel = 1;
@@ -40,5 +40,9 @@ void init_game() {
 	rodney.posy = rand_int(1, 19);
 	rodney.color = CLR_WHITE;
 	rodney.level = 0;
+
+	o_list = new_linked_list();
+	m_list = new_linked_list();
+
 	create_lvl(0);
 }

@@ -19,6 +19,7 @@ void init_ncurses() {
 
 	init_colors();
 
+    mvprintw(0, 0, "Digging the dungeon, please wait...");
 }
 
 void init_colors() {

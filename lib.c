@@ -11,90 +11,74 @@
 
 #include "opmorl.h"
 
-int rand_int(int min, int max) {
-	return rand()%(max-min+1)+min;
+int rand_int(int min, int max)
+{
+    return rand() % (max - min + 1) + min;
 }
 
-void add_monster(Monster *mon) {
-	Monster *list = m_list;
-	if (list == NULL) {
-		list = mon;
-		return;
-	}
-	while (list->next != NULL)
-		list = list->next;
-	list->next = mon;
+void add_object(Object *obj)
+{
+    append(o_list, obj);
 }
 
-void add_object(Object *obj) {
-	Object *list = o_list;
-	if (list == NULL) {
-		list = obj;
-		return;
-	}
-	while (list->next != NULL)
-		list = list->next;
-	list->next = obj;
+void add_monster(Monster *mon)
+{
+    append(m_list, mon);
 }
 
-void rm_mon_at(int x, int y, int level) {
-	Monster *mon = m_list;
-	if (mon == NULL) {
-		return;
-	}
-	if (mon->next == NULL) {
-		if (mon->posx == x && mon->posy == y && mon->level == level) {
-			free(mon), m_list = NULL;
-		}
-		return;
-	}
-	while (mon->next) {
-		Monster *maybe = mon->next; /* I find it easier to read/debug (?) like that */
-		if (maybe->posx == x && maybe->posy == y && maybe->level == level) {
-			mon->next = maybe->next;
-			free(maybe);
-		}
-	}
+Monster *find_mon_at(int x, int y, int level)
+{
+    LinkedListNode *mon_node = m_list->head;
+
+    if (!mon_node)
+        return NULL; /* Be careful with that one ! */
+
+    while(mon_node != NULL) {
+        Monster *mon = (Monster *) mon_node->element;
+        if(mon->posx == x && mon->posy == y && mon->level == level)
+            return mon;
+
+        mon_node = mon_node->next;
+    }
+
+    return NULL;
 }
 
-void rm_obj_at(int x, int y, int level) {
-	Object *obj = o_list;
-	if (obj == NULL) {
-		return;
-	}
-	if (obj->next == NULL) {
-		if (obj->posx == x && obj->posy == y && obj->level == level) {
-			free(obj), o_list = NULL;
-		}
-		return;
-	}
-	while (obj->next) {
-		Object *maybe = obj->next; /* I find it easier to read/debug (?) like that */
-		if (maybe->posx == x && maybe->posy == y && maybe->level == level) {
-			obj->next = maybe->next;
-			free(maybe);
-		}
-	}
+Object *find_obj_at(int x, int y, int level)
+{
+    LinkedListNode *obj_node = m_list->head;
+
+    if (!obj_node)
+        return NULL; /* Be careful with that one ! */
+
+    while(obj_node != NULL) {
+        Object *obj = (Object *) obj_node->element;
+        if(obj->posx == x && obj->posy == y && obj->level == level)
+            return obj;
+
+        obj_node = obj_node->next;
+    }
+
+    return NULL;
 }
 
-Monster *find_mon_at(int x, int y, int level) {
-	Monster *mon = m_list;
-	if (!mon)
-		return NULL; /* Be careful with that one ! */
-	do {
-		if (mon->posx == x && mon->posy == y && mon->level == level)
-			return mon;
-	} while ((mon = mon->next));
-	return NULL;
+void rm_mon_at(int x, int y, int level)
+{
+    Monster *mon;
+
+    if((mon = find_mon_at(x, y, level)) == NULL)
+        return;
+
+    delete(m_list, mon);
 }
 
-Object *find_obj_at(int x, int y, int level) {
-	Object *obj = o_list;
-	if (!obj)
-		return NULL; /* Be careful with that one ! */
-	do {
-		if (obj->posx == x && obj->posy == y && obj->level == level)
-			return obj;
-		} while ((obj = obj->next));
-	return NULL;
-	}
+void rm_obj_at(int x, int y, int level)
+{
+    Object *obj;
+
+    if((obj = find_obj_at(x, y, level)) == NULL)
+        return;
+
+    delete(o_list, obj);
+}
+
