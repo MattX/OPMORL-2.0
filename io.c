@@ -38,9 +38,9 @@ void display_map()
                 mvaddch(i + 1, j, '-');
                 break;
             case T_CORRIDOR:
-                attron(COLOR_PAIR(CLR_YELLOW));
+                //attron(COLOR_PAIR(CLR_YELLOW));
                 mvaddch(i + 1, j, '.');
-                attroff(COLOR_PAIR(CLR_YELLOW));
+                //attroff(COLOR_PAIR(CLR_YELLOW));
                 break;
             case T_WALL:
                 mvaddch(i + 1, j, '#');

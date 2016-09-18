@@ -79,7 +79,7 @@ void make_room(int level, int top_wall, int bottom_wall, int left_wall, int righ
     for (int i_x = top_wall; i_x <= bottom_wall; i_x++) {
         for (int i_y = left_wall; i_y <= right_wall; i_y++) {
             if ((i_x == top_wall || i_x == bottom_wall || i_y == left_wall || i_y == right_wall)
-                && lvl_map[level][i_x][i_y] & T_GROUND)
+                && lvl_map[level][i_x][i_y] == T_GROUND)
                 lvl_map[level][i_x][i_y] = T_WALL;
             else if (lvl_map[level][i_x][i_y] & ~T_WALKABLE)
                 lvl_map[level][i_x][i_y] = T_FLOOR;
@@ -127,18 +127,72 @@ void make_corridor(int level, int from_x, int from_y, int to_x, int to_y)
             x_target = cur_x - x_span;
         }
 
-        for (int i_y = cur_y; i_y <= y_target; i_y++)
+        for (int i_y = cur_y; i_y <= y_target; i_y++) {
             if (lvl_map[level][cur_x][i_y] & ~T_WALKABLE)
                 lvl_map[level][cur_x][i_y] = T_CORRIDOR;
+            if (cur_x != 0 && lvl_map[level][cur_x - 1][i_y] == T_GROUND)
+                lvl_map[level][cur_x - 1][i_y] = T_WALL;
+            if (cur_x < LEVEL_HEIGHT - 1 && lvl_map[level][cur_x + 1][i_y] == T_GROUND)
+                lvl_map[level][cur_x + 1][i_y] = T_WALL;
+        }
 
         cur_y = y_target;
 
-        for (int i_x = min(cur_x, x_target); i_x <= max(cur_x, x_target); i_x++)
+        for (int i_x = min(cur_x, x_target); i_x <= max(cur_x, x_target); i_x++) {
             if (lvl_map[level][i_x][cur_y] & ~T_WALKABLE)
                 lvl_map[level][i_x][cur_y] = T_CORRIDOR;
+            if (cur_y > 0 && lvl_map[level][i_x][cur_y - 1] == T_GROUND)
+                lvl_map[level][i_x][cur_y - 1] = T_WALL;
+            if (cur_y < LEVEL_WIDTH - 1 && lvl_map[level][i_x][cur_y + 1] == T_GROUND)
+                lvl_map[level][i_x][cur_y + 1] = T_WALL;
+        }
 
         cur_x = x_target;
     }
+}
+
+
+/*
+ * Checks if there is a walkable path from (from_x, from_y) to (to_x, to_y)
+ */
+int can_walk(int level, int from_x, int from_y, int to_x, int to_y)
+{
+    bool checked[LEVEL_HEIGHT][LEVEL_WIDTH];
+    int stack_x[LEVEL_HEIGHT * LEVEL_WIDTH];
+    int stack_y[LEVEL_HEIGHT * LEVEL_WIDTH];
+    int stack_pointer = 0;
+
+    memset(checked, false, LEVEL_HEIGHT * LEVEL_WIDTH);
+
+    stack_x[0] = from_x;
+    stack_y[0] = from_y;
+
+    while (stack_pointer >= 0) {
+        int cur_x = stack_x[stack_pointer];
+        int cur_y = stack_y[stack_pointer];
+        stack_pointer--;
+        checked[cur_x][cur_y] = true;
+
+        if (cur_x == to_x && cur_y == to_y)
+            return true;
+
+        for (int x = cur_x - 1; x <= cur_x + 1; x++) {
+            if (x < 0 || x >= LEVEL_HEIGHT)
+                continue;
+            for (int y = cur_y - 1; y <= cur_y + 1; y++) {
+                if (y < 0 || y >= LEVEL_WIDTH)
+                    continue;
+                if (lvl_map[level][x][y] & T_WALKABLE && !checked[x][y]) {
+                    stack_pointer++;
+                    stack_x[stack_pointer] = x;
+                    stack_y[stack_pointer] = y;
+                }
+            }
+        }
+
+    }
+
+    return false;
 }
 
 
@@ -154,7 +208,8 @@ void create_level(int level)
     }
 
     // Generate some rooms
-    int rooms_x[max_rooms], rooms_y[max_rooms]; // for room centers
+    int rooms_x[max_rooms], rooms_y[max_rooms];
+    bool connected[max_rooms];
     int nb_rooms = rand_int(min_rooms, max_rooms);
 
     for (int i = 0; i < nb_rooms; i++) {
@@ -169,10 +224,22 @@ void create_level(int level)
         rooms_y[i] = room_y + room_size_y / 2;
     }
 
+    // Check room connections
+    connected[0] = true;
+    for (int i = 1; i < nb_rooms; i++) {
+        if (can_walk(0, rooms_x[0], rooms_y[0], rooms_x[i], rooms_y[i]))
+            connected[i] = true;
+    }
+
     // Connect rooms
     for (int i = 1; i < nb_rooms; i++) {
-        int target_room = rand_int(0, i - 1);
-        make_corridor(level, rooms_x[i], rooms_y[i], rooms_x[target_room], rooms_y[target_room]);
+        if (!connected[i]) {
+            int target_room;
+            do {
+                target_room = rand_int(0, nb_rooms - 1);
+            } while (!connected[target_room]);
+            make_corridor(level, rooms_x[i], rooms_y[i], rooms_x[target_room], rooms_y[target_room]);
+        }
     }
 
     // Add stairs
