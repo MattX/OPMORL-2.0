@@ -30,6 +30,10 @@
 #define DEFAULT_FORECOLOR -1
 
 #define LEVELS 25
+#define LEVEL_WIDTH 80
+#define LEVEL_HEIGHT 21
+
+#define LOGFILE_PATH "opmorl.log"
 
 /* Structs */
 
@@ -91,12 +95,13 @@ typedef struct Monster {
 } Monster;
 
 typedef enum {
-	T_WALL,
-	T_CORRIDOR,
-	T_OPEN_DOOR,
-	T_CLOSED_DOOR,
-	T_FLOOR,
-	T_STAIRS
+    T_WALL = 0x1,
+    T_CORRIDOR = 0x2,
+    T_OPEN_DOOR = 0x4,
+    T_CLOSED_DOOR = 0x8,
+    T_FLOOR = 0x10,
+    T_STAIRS_UP = 0x20,
+    T_STAIRS_DOWN = 0x40
 } TileType;
 
 typedef enum {
@@ -130,9 +135,9 @@ void exit_ncurses();
 
 void create_lvl(int);
 
-void get_input();
+char get_input();
 
-int pline(char *);
+void pline(char *, ...);
 void display_everything();
 void display_map();
 void display_stats();
@@ -146,13 +151,23 @@ Object *find_obj_at(int, int, int);
 
 int rand_int(int, int);
 
-void move_rodney(int, int);
-void go_down();
+int move_rodney(int, int);
+
+int use_stairs(int);
+
+void process_turn(char c);
 
 /* Globals */
 
-TileType lvl_map[LEVELS][21][80];
+TileType lvl_map[LEVELS][LEVEL_HEIGHT][LEVEL_WIDTH];
 Player rodney;
 
 LinkedList *o_list;
 LinkedList *m_list;
+
+/* Whether there is something displayed on the status line already */
+int line_displayed;
+int last_col;
+FILE *log_file;
+
+void print_to_log(char *format, ...);

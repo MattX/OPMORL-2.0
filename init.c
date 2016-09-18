@@ -19,7 +19,13 @@ void init_ncurses() {
 
 	init_colors();
 
-    mvprintw(0, 0, "Digging the dungeon, please wait...");
+    log_file = fopen(LOGFILE_PATH, "a");
+    if (log_file == NULL)
+        perror("Error opening log file: ");
+
+    fprintf(log_file, "Started OPMORL at %d\n", (int) time(NULL));
+
+    pline("Digging the dungeon, please wait...");
 }
 
 void init_colors() {
@@ -35,6 +41,35 @@ void exit_ncurses() {
 
 
 void exit_game() {
-	mvprintw(0, 0, "Goodbye.");
+    pline("Goodbye.");
 	getch();
+}
+
+void init_game()
+{
+    srand((unsigned int) time(NULL));
+
+    rodney.pclass = C_WARRIOR;
+    rodney.gold = rodney.exp = 0;
+    rodney.explevel = 1;
+    rodney.hp = rodney.max_hp = rand_int(12, 18);
+    rodney.charisma = rand_int(12, 18);
+    rodney.constitution = rand_int(12, 18);
+    rodney.strength = rand_int(12, 18);
+    rodney.dexterity = rand_int(12, 18);
+    rodney.wisdom = rand_int(12, 18);
+
+    // TODO: place rodney on good tile
+    rodney.posx = rand_int(1, LEVEL_HEIGHT);
+    rodney.posy = rand_int(1, LEVEL_WIDTH);
+    rodney.color = CLR_WHITE;
+    rodney.level = 0;
+
+    o_list = new_linked_list();
+    m_list = new_linked_list();
+
+    line_displayed = 0;
+    last_col = 0;
+
+    create_lvl(0);
 }

@@ -4,7 +4,7 @@ project(OPMORL_2_0)
 find_package(Curses REQUIRED)
 include_directories(${CURSES_INCLUDE_DIR})
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c99 -g")
 
 set(SOURCE_FILES
     init.c
@@ -15,7 +15,7 @@ set(SOURCE_FILES
     object.c
     opmorl.c
     opmorl.h
-    player.c linkedlist.c linkedlist.h)
+        player.c linkedlist.c linkedlist.h turn.c)
 
 add_executable(opmorl ${SOURCE_FILES})
 target_link_libraries(opmorl ${CURSES_LIBRARIES})
