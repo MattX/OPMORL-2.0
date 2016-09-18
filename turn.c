@@ -44,8 +44,7 @@ void process_turn(char c)
         break;
     case 'q': /* Need to rewrite it cleanly */
         exit_game();
-        exit_ncurses();
-        exit(0);
+        break;
     default:
         break;
     }

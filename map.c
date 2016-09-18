@@ -14,7 +14,7 @@
  * Finds a random tile on the specified map level. If can_have_mon is false, the returned
  * tile will not have a monster on it. The tile will be of one of types specified in
  * tile_types.
- * Returns 0 if no empty tile is available, 1 otherwise. Stores the coordinates of the
+ * Returns the number of available tiles satisfying the constraints. Stores the coordinates of the
  * empty tile in x and y.
  */
 int find_floor_tile(int level, int *x, int *y, int tile_types, int can_have_mon)
@@ -40,16 +40,17 @@ int find_floor_tile(int level, int *x, int *y, int tile_types, int can_have_mon)
     if (nb_avail == 0)
         return 0;
 
-    i_selected = rand_int(0, nb_avail);
+    i_selected = rand_int(0, nb_avail - 1);
     for (int i_x = 0; i_x < LEVEL_HEIGHT; i_x++) {
         for (int i_y = 0; i_y < LEVEL_WIDTH; i_y++) {
-            if (i_selected == 0) {
-                *x = i_x;
-                *y = i_y;
-                return 1;
-            }
-            if (avail[i_x][i_y])
+            if (avail[i_x][i_y]) {
+                if (i_selected == 0) {
+                    *x = i_x;
+                    *y = i_y;
+                    return nb_avail;
+                }
                 i_selected--;
+            }
         }
     }
 
@@ -57,18 +58,27 @@ int find_floor_tile(int level, int *x, int *y, int tile_types, int can_have_mon)
     return 0;
 }
 
-void create_lvl(int level)
+void create_level(int level)
 {
-    int i, j;
-    for (i = 0; i < LEVEL_HEIGHT; i++) {
-        for (j = 0; j < LEVEL_WIDTH; j++) {
-            if (i == 0 || j == 0 || i == LEVEL_HEIGHT - 1 || j == LEVEL_WIDTH - 1) {
-                lvl_map[level][i][j] = T_WALL;
+    int i_x, i_y;
+    for (i_x = 0; i_x < LEVEL_HEIGHT; i_x++) {
+        for (i_y = 0; i_y < LEVEL_WIDTH; i_y++) {
+            if (i_x == 0 || i_y == 0 || i_x == LEVEL_HEIGHT - 1 || i_y == LEVEL_WIDTH - 1) {
+                lvl_map[level][i_x][i_y] = T_WALL;
             } /* Around */
             else
-                lvl_map[level][i][j] = T_FLOOR;
+                lvl_map[level][i_x][i_y] = T_FLOOR;
         }
     }
 
-    lvl_map[level][rand_int(1, LEVEL_HEIGHT - 2)][rand_int(1, LEVEL_WIDTH - 2)] = T_STAIRS_UP;
+    if (level != LEVELS - 1) {
+        if (!find_floor_tile(level, &i_x, &i_y, T_FLOOR, 1))
+            print_to_log("Could not place stairs down!\n");
+        else
+            lvl_map[level][i_x][i_y] = T_STAIRS_DOWN;
+    }
+
+    if (!find_floor_tile(level, &i_x, &i_y, T_FLOOR, 1))
+        print_to_log("Could not place stairs up!\n");
+    lvl_map[level][i_x][i_y] = T_STAIRS_UP;
 }

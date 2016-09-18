@@ -8,7 +8,6 @@
  */
 
 #include "opmorl.h"
-#include <stdarg.h>
 
 
 char get_input()
@@ -31,7 +30,7 @@ void display_map()
     attron(COLOR_PAIR(DEFAULT));
     for (i = 0; i < LEVEL_HEIGHT; i++) {
         for (j = 0; j < LEVEL_WIDTH; j++) {
-            switch (lvl_map[rodney.level][i][j]) {
+            switch (lvl_map[rodney.dlvl][i][j]) {
             case T_CLOSED_DOOR:
                 mvaddch(i + 1, j, '+');
                 break;
@@ -48,10 +47,10 @@ void display_map()
                 mvaddch(i + 1, j, '.');
                 break;
             case T_STAIRS_UP:
-                mvaddch(i + 1, j, '>');
+                mvaddch(i + 1, j, '<');
                 break;
             case T_STAIRS_DOWN:
-                mvaddch(i + 1, j, '<');
+                mvaddch(i + 1, j, '>');
             }
         }
     }
@@ -91,11 +90,11 @@ void display_stats()
 {
     mvprintw(getmaxy(stdscr) - 2, 0, "St:%d Dx:%d Co:%d In:%d Wi:%d Ch:%d", rodney.strength, rodney.dexterity,
              rodney.constitution, rodney.intelligence, rodney.wisdom, rodney.charisma);
-    mvprintw(getmaxy(stdscr) - 1, 0, "Dlvl:%d\t$:%d\tHP:%d(%d)", rodney.level + 1, rodney.gold, rodney.hp,
+    mvprintw(getmaxy(stdscr) - 1, 0, "Dlvl:%d\t$:%d\tHP:%d(%d)", rodney.dlvl + 1, rodney.gold, rodney.hp,
              rodney.max_hp);
 }
 
-void pline(char *format, ...)
+void va_pline(char *format, va_list args)
 {
     if (line_displayed) {
         mvprintw(0, last_col, " --more--");
@@ -104,14 +103,45 @@ void pline(char *format, ...)
 
     line_displayed = 1;
 
-    va_list args;
-    va_start(args, format);
     move(0, 0);
     vwprintw(stdscr, format, args);
-    va_end(args);
     last_col = getcurx(stdscr);
 
     clrtoeol();
+}
+
+void pline(char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    va_pline(format, args);
+    va_end(args);
+}
+
+int yes_no(char *format, ...)
+{
+    char append[] = " (y/n) ";
+    char *new_format;
+    int rep = 0;
+    size_t new_format_len = strlen(format) + strlen(append) + 1;
+
+    new_format = malloc(new_format_len * sizeof(char));
+    snprintf(new_format, new_format_len, "%s%s", format, append);
+
+    va_list args;
+    va_start(args, format);
+    va_pline(new_format, args);
+    va_end(args);
+
+    free(new_format);
+
+    while (1) {
+        rep = getch();
+        if (rep == 'y' || rep == 'Y')
+            return 1;
+        if (rep == 'n' || rep == 'N')
+            return 0;
+    }
 }
 
 void print_to_log(char *format, ...)

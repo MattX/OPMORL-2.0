@@ -43,6 +43,8 @@ void exit_ncurses() {
 void exit_game() {
     pline("Goodbye.");
 	getch();
+    exit_ncurses();
+    exit(0);
 }
 
 void init_game()
@@ -63,7 +65,7 @@ void init_game()
     rodney.posx = rand_int(1, LEVEL_HEIGHT);
     rodney.posy = rand_int(1, LEVEL_WIDTH);
     rodney.color = CLR_WHITE;
-    rodney.level = 0;
+    rodney.dlvl = 0;
 
     o_list = new_linked_list();
     m_list = new_linked_list();
@@ -71,5 +73,6 @@ void init_game()
     line_displayed = 0;
     last_col = 0;
 
-    create_lvl(0);
+    for (int i_level = 0; i_level < LEVELS; i_level++)
+        create_level(i_level);
 }

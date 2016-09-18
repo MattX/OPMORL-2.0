@@ -29,9 +29,11 @@
 #define DEFAULT_BACKCOLOR -1
 #define DEFAULT_FORECOLOR -1
 
-#define LEVELS 25
+#define LEVELS 3
 #define LEVEL_WIDTH 80
 #define LEVEL_HEIGHT 21
+
+#define MAX_NAME 50
 
 #define LOGFILE_PATH "opmorl.log"
 
@@ -61,7 +63,7 @@ typedef enum {
 typedef struct Object{
 	ObjectType type;
 
-	char name[50];
+    char name[MAX_NAME];
 
 	int is_gold; /* We treat this separately */
 	int posx, posy, level; /* Coordinates : x, y, level (we want persistent levels) */
@@ -83,7 +85,7 @@ typedef enum {
 typedef struct Monster {
 	Mtype type;
 
-	char name[50];
+    char name[MAX_NAME];
 
 	int posx, posy, level;
 	int attack;
@@ -101,8 +103,10 @@ typedef enum {
     T_CLOSED_DOOR = 0x8,
     T_FLOOR = 0x10,
     T_STAIRS_UP = 0x20,
-    T_STAIRS_DOWN = 0x40
+    T_STAIRS_DOWN = 0x40,
 } TileType;
+
+#define T_ANY (~0)
 
 typedef enum {
 	C_SAMURAI,
@@ -116,11 +120,12 @@ typedef struct {
 	int posx, posy; /* Position */
 	int explevel, exp; /* Experience stuff */
 	int hp, max_hp;
-	int level; /* The depth in the dungeon or whatever you may call it */
+    int dlvl; /* The depth in the dungeon or whatever you may call it */
 	int dexterity, strength, constitution, intelligence, wisdom, charisma; /* Stats */
 
 	Object inventory[52];
 	int gold;
+    int score;
 	Color color;
 } Player;
 
@@ -133,11 +138,15 @@ void game_loop();
 void exit_game();
 void exit_ncurses();
 
-void create_lvl(int);
+int find_floor_tile(int, int *, int *, int, int);
+
+void create_level(int);
 
 char get_input();
 
 void pline(char *, ...);
+
+int yes_no(char *, ...);
 void display_everything();
 void display_map();
 void display_stats();
