@@ -42,6 +42,12 @@ int sign(int a)
         return -1;
 }
 
+void strncpy_pad(char *dest, const char *src, size_t n)
+{
+    strncpy(dest, src, n - 1);
+    dest[n - 1] = '\0';
+}
+
 void add_object(Object *obj)
 {
     append(o_list, obj);
@@ -72,7 +78,7 @@ Monster *find_mon_at(int x, int y, int level)
 
 Object *find_obj_at(int x, int y, int level)
 {
-    LinkedListNode *obj_node = m_list->head;
+    LinkedListNode *obj_node = o_list->head;
 
     if (!obj_node)
         return NULL; /* Be careful with that one ! */

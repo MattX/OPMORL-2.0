@@ -34,14 +34,18 @@
 #define LEVEL_WIDTH 80
 #define LEVEL_HEIGHT 21
 
+#define INVENTORY_SIZE 52
+
 #define MAX_NAME 50
+#define MAX_DESCR 200
 
 #define LOGFILE_PATH "opmorl.log"
 
 /* Structs */
 
 
-typedef enum {
+typedef enum e_color
+{
     CLR_DEFAULT = 0, /* COLOR_PAIR(0) is the default back/fore ground colors */
     CLR_WHITE = 1,
     CLR_YELLOW = 2
@@ -50,53 +54,118 @@ typedef enum {
  * just have, before printing a monster/object, to call attron(COLOR_PAIR(obj->color)); and attroff().	*/
 
 
-typedef enum {
-	OT_SWORD,
-	OT_SHIELD,
-	OT_POTION,
-	OT_WAND,
-	OT_RING,
-	OT_BODY_ARMOR,
-	OT_HELM,
-	OT_FOOD,
-	OT_SCROLL /* We are free not to implement all of them right now */
-} ObjectType; /* Object type */
+/****** OBJECTS & object mixins ******/
 
-typedef struct Object{
-	ObjectType type;
+// Magic classes
+#define NB_MAGIC_CLASSES 5
+int magic_class_weakness[NB_MAGIC_CLASSES][NB_MAGIC_CLASSES];
+extern char *magic_class_names[NB_MAGIC_CLASSES];
+
+
+#define NB_OT 8
+// This is a flag field because mixins need to indicate compatibility with objects (and in general
+// to allow filtering).
+typedef enum {
+    OT_MONEY = 0x01,
+    OT_MELEE = 0x02,
+    OT_POTION = 0x04,
+    OT_WAND = 0x08,
+    OT_TOOL = 0x10,
+    OT_BODY_ARMOR = 0x20,
+    OT_HELM = 0x40,
+    OT_FOOD = 0x80,
+} ObjectClassFlag; /* Object type */
+
+#define OT_ALL (~0)
+
+typedef struct
+{
+    char *possible_names; /* comma separated */
+
+    ObjectClassFlag o_class_flag;
+    char symbol;
+} ObjectClass;
+
+typedef struct
+{
+    ObjectClass *class;
+
+    char name[MAX_NAME];
+    int value;
+    int power;
+
+    int mixin1;
+    int mixin2;
+    int magic_class;
+    Color color;
+} ObjectType;
+
+
+typedef enum
+{
+    MT_BG_INT, MT_BG_STR, MT_BG_DEX, MT_BG_HP, MT_BG_REGEN, MT_BG_SPEED, MT_BG_WAKE, MT_BG_TELEPATHY, MT_BG_ID,
+    MT_BG_EMERGPORT,
+    MT_AT_SMALL, MT_AT_LARGE, MT_AT_SPLIT, MT_AT_CRITICAL, MT_AT_MATCH, MT_AT_FREEZE, MT_AT_EXP, MT_AT_RAGE,
+    MT_DF_SMALL, MT_DF_CRITICAL, MT_DF_WEAKNESS, MT_DF_BLOWBACK, MT_DF_REFLECTION, MT_DF_MELEE,
+    MT_US_TP, MT_US_LEVELPORT, MT_US_MAP, MT_US_HP, MT_US_MAX_HP, MT_US_INT, MT_US_STR, MT_US_DEX, MT_US_OPEN,
+} Mixin_type; // To be able to quickly check a mixin
+
+
+typedef struct
+{
+    Mixin_type id;
+    int compatible_classes;
+    char *descr;
+} Mixin;
+
+
+typedef struct s_object
+{
+    const ObjectType *type;
 
     char name[MAX_NAME];
 
-	int is_gold; /* We treat this separately */
 	int posx, posy, level; /* Coordinates : x, y, level (we want persistent levels) */
-	int value; /* The monetary value for buying / selling the object */
-	int damage; /* For everything that attacks, including wands */
-	//	Effect effect; /* For potions */
-	int shots_left; /* For wands */
+    int uses_left; /* For wands */
+    int cooldown;
 	int flags; /* Such as invisible... */
-
-	char symbol; /* To display */
-	Color color; /* to be used with COLOR_PAIR(color) */
+    int amount;
 } Object;
 
+void make_objects();
 
-typedef enum {
-	EMPTY, FOR, NOW
+void add_level_objects(int level);
+
+/****** MONSTERS ******/
+
+
+typedef struct
+{
 } Mtype; /* Monster type */
 
-typedef struct Monster {
-	Mtype type;
+typedef enum
+{
+    MT_INVISIBLE,
+    MT_ASLEEP,
+    MT_FROZEN,
+} Mflags;
 
-    char name[MAX_NAME];
+typedef struct s_monster
+{
+    Mtype type;
 
 	int posx, posy, level;
-	int attack;
 	int life_points;
-	int flags; /* Such as invisible, flying ... */
+    int move_timeout; /* How much time before unfreezing/waking/etc. */
+    Mflags flags; /* Such as invisible, flying ... */
 
 	char symbol;
 	Color color; /* to be used with COLOR_PAIR(color) */
 } Monster;
+
+
+/************/
+
 
 typedef enum {
     T_WALL = 0x1,
@@ -112,22 +181,18 @@ typedef enum {
 #define T_ANY (~0)
 #define T_WALKABLE (T_CORRIDOR | T_OPEN_DOOR | T_FLOOR | T_STAIRS_UP | T_STAIRS_DOWN)
 
-typedef enum {
-	C_SAMURAI,
-	C_WARRIOR,
-	C_ARCHER,
-    C_VALKYRIE
-} PlayerClass;
 
 typedef struct {
-	PlayerClass pclass;
 	int posx, posy; /* Position */
 	int explevel, exp; /* Experience stuff */
 	int hp, max_hp;
     int dlvl; /* The depth in the dungeon or whatever you may call it */
 	int dexterity, strength, constitution, intelligence, wisdom, charisma; /* Stats */
 
-	Object inventory[52];
+    Object *inventory[INVENTORY_SIZE];
+    Object *wielded;
+    Object *helm;
+    Object *body_armor;
 	int gold;
     int score;
 	Color color;
@@ -176,10 +241,15 @@ int use_stairs(int);
 
 void process_turn(char c);
 
+void init_mixins();
+
+void strncpy_pad(char *dest, const char *src, size_t n);
+
 /* Globals */
 
 TileType lvl_map[LEVELS][LEVEL_HEIGHT][LEVEL_WIDTH];
 Player rodney;
+int turn;
 
 LinkedList *o_list;
 LinkedList *m_list;

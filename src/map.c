@@ -78,10 +78,10 @@ void make_room(int level, int top_wall, int bottom_wall, int left_wall, int righ
 {
     for (int i_x = top_wall; i_x <= bottom_wall; i_x++) {
         for (int i_y = left_wall; i_y <= right_wall; i_y++) {
-            if ((i_x == top_wall || i_x == bottom_wall || i_y == left_wall || i_y == right_wall)
-                && lvl_map[level][i_x][i_y] == T_GROUND)
-                lvl_map[level][i_x][i_y] = T_WALL;
-            else if (lvl_map[level][i_x][i_y] & ~T_WALKABLE)
+            if ((i_x == top_wall || i_x == bottom_wall || i_y == left_wall || i_y == right_wall)) {
+                if (lvl_map[level][i_x][i_y] == T_GROUND)
+                    lvl_map[level][i_x][i_y] = T_WALL;
+            } else if (lvl_map[level][i_x][i_y] & ~T_WALKABLE)
                 lvl_map[level][i_x][i_y] = T_FLOOR;
         }
     }
@@ -127,9 +127,12 @@ void make_corridor(int level, int from_x, int from_y, int to_x, int to_y)
             x_target = cur_x - x_span;
         }
 
+
+        // TODO: add support for door generation
         for (int i_y = cur_y; i_y <= y_target; i_y++) {
             if (lvl_map[level][cur_x][i_y] & ~T_WALKABLE)
                 lvl_map[level][cur_x][i_y] = T_CORRIDOR;
+
             if (cur_x != 0 && lvl_map[level][cur_x - 1][i_y] == T_GROUND)
                 lvl_map[level][cur_x - 1][i_y] = T_WALL;
             if (cur_x < LEVEL_HEIGHT - 1 && lvl_map[level][cur_x + 1][i_y] == T_GROUND)
@@ -141,6 +144,7 @@ void make_corridor(int level, int from_x, int from_y, int to_x, int to_y)
         for (int i_x = min(cur_x, x_target); i_x <= max(cur_x, x_target); i_x++) {
             if (lvl_map[level][i_x][cur_y] & ~T_WALKABLE)
                 lvl_map[level][i_x][cur_y] = T_CORRIDOR;
+
             if (cur_y > 0 && lvl_map[level][i_x][cur_y - 1] == T_GROUND)
                 lvl_map[level][i_x][cur_y - 1] = T_WALL;
             if (cur_y < LEVEL_WIDTH - 1 && lvl_map[level][i_x][cur_y + 1] == T_GROUND)
@@ -222,23 +226,29 @@ void create_level(int level)
 
         rooms_x[i] = room_x + room_size_x / 2;
         rooms_y[i] = room_y + room_size_y / 2;
+        connected[i] = false;
     }
 
     // Check room connections
     connected[0] = true;
     for (int i = 1; i < nb_rooms; i++) {
-        if (can_walk(0, rooms_x[0], rooms_y[0], rooms_x[i], rooms_y[i]))
+        if (can_walk(level, rooms_x[0], rooms_y[0], rooms_x[i], rooms_y[i]))
             connected[i] = true;
     }
 
     // Connect rooms
     for (int i = 1; i < nb_rooms; i++) {
+        print_to_log("Examining room %d on level %d\n", i, level);
         if (!connected[i]) {
             int target_room;
             do {
                 target_room = rand_int(0, nb_rooms - 1);
             } while (!connected[target_room]);
             make_corridor(level, rooms_x[i], rooms_y[i], rooms_x[target_room], rooms_y[target_room]);
+            connected[i] = true;
+
+            print_to_log("Level %d: tracing corridor from %d %d to %d %d to connect room %d\n", level,
+                         rooms_x[i], rooms_y[i], rooms_x[target_room], rooms_y[target_room], i);
         }
     }
 
@@ -253,4 +263,7 @@ void create_level(int level)
     if (!find_floor_tile(level, &i_x, &i_y, T_FLOOR, 1))
         print_to_log("Could not place stairs up!\n");
     lvl_map[level][i_x][i_y] = T_STAIRS_UP;
+
+    // Add objects
+    add_level_objects(level);
 }

@@ -18,6 +18,7 @@ void init_ncurses() {
 	noecho();
 
 	init_colors();
+    line_displayed = 0;
 
     log_file = fopen(LOGFILE_PATH, "a");
     if (log_file == NULL)
@@ -52,7 +53,8 @@ void init_game()
 {
     srand((unsigned int) time(NULL));
 
-    rodney.pclass = C_WARRIOR;
+    make_objects();
+
     rodney.gold = rodney.exp = 0;
     rodney.explevel = 1;
     rodney.hp = rodney.max_hp = rand_int(12, 18);
@@ -61,11 +63,20 @@ void init_game()
     rodney.strength = rand_int(12, 18);
     rodney.dexterity = rand_int(12, 18);
     rodney.wisdom = rand_int(12, 18);
+    rodney.body_armor = rodney.wielded = rodney.helm = NULL;
+
 
     rodney.color = CLR_WHITE;
 
     o_list = new_linked_list();
     m_list = new_linked_list();
+    turn = 0;
+
+    for (int i = 0; i < INVENTORY_SIZE; i++) {
+        rodney.inventory[i] = NULL;
+    }
+    rodney.gold = 100;
+
 
     line_displayed = 0;
     last_col = 0;

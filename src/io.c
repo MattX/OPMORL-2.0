@@ -66,10 +66,12 @@ void display_map()
     if (obj_node)
         do {
             Object *obj = (Object *) obj_node->element;
+            if (obj->level != rodney.dlvl)
+                continue;
 
-            attron(COLOR_PAIR(obj->color));
-            mvaddch(obj->posx + 1, obj->posy, obj->symbol);
-            attroff(COLOR_PAIR(obj->color));
+            attron(COLOR_PAIR(obj->type->color));
+            mvaddch(obj->posx + 1, obj->posy, obj->type->class->symbol);
+            attroff(COLOR_PAIR(obj->type->color));
         } while ((obj_node = obj_node->next));
 
     /* Monsters */
@@ -96,8 +98,8 @@ void display_stats()
 {
     mvprintw(getmaxy(stdscr) - 2, 0, "St:%d Dx:%d Co:%d In:%d Wi:%d Ch:%d", rodney.strength, rodney.dexterity,
              rodney.constitution, rodney.intelligence, rodney.wisdom, rodney.charisma);
-    mvprintw(getmaxy(stdscr) - 1, 0, "Dlvl:%d\t$:%d\tHP:%d(%d)", rodney.dlvl + 1, rodney.gold, rodney.hp,
-             rodney.max_hp);
+    mvprintw(getmaxy(stdscr) - 1, 0, "Dlvl:%d\t$:%d\tHP:%d(%d)\tT:%d", rodney.dlvl + 1, rodney.gold, rodney.hp,
+             rodney.max_hp, turn);
 }
 
 void va_pline(char *format, va_list args)

@@ -23,8 +23,17 @@ int process_move_input(char c)
 }
 
 
+void show_env_messages()
+{
+    Object *o;
+    if ((o = find_obj_at(rodney.posx, rodney.posy, rodney.dlvl)) != NULL)
+        pline("You see here a %s", o->type->name);
+}
+
 void process_turn(char c)
 {
+    int turn_elapsed = 0;
+
     switch (c) {
     case 'h':
     case 'j':
@@ -34,19 +43,21 @@ void process_turn(char c)
     case 'u':
     case 'b':
     case 'n':
-        process_move_input(c);
+        turn_elapsed = process_move_input(c);
         break;
     case '>':
-        use_stairs(0);
+        turn_elapsed = use_stairs(0);
         break;
     case '<':
-        use_stairs(1);
+        turn_elapsed = use_stairs(1);
         break;
-    case 'q': /* Need to rewrite it cleanly */
+    case 'q':
         exit_game();
         break;
     default:
         break;
     }
+
+    show_env_messages();
 }
 
