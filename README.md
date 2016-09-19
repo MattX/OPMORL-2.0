@@ -18,7 +18,6 @@ available:
 
  * Potions
  * Armor (helm and body armor, effectively two armor slots)
- * Ranged weapons and projectiles
  * Wands
  * Melee weapons
  * Tools
@@ -34,19 +33,23 @@ Finally, mixins define define any special effects of the objects. Effect mixins 
 and attack, defense and use mixins produce special results when the object is used to attack, when an attack is
 received, and when the object is used, respectively. An object can have at most 2 mixins.
 
-100 items will be available on each game.
+100 items types will be available on each game.
 
 ### Monster generation
 
 Monsters also have a magic class, used to determine weakness/resistance.
+Contrary to items, they are predefined.
 
 ### Combat
 
-### Special levels / backstory?
+## TODO
+
+1. Inventory management
+2. Raytracing algorithm for LOS and combat
+3. Monster generation and movement
+4. Combat implementation
 
 ## Mixins reference
-
-Mixins that are available to monsters are indicated by (MON).
 
 ### Background mixins
 
