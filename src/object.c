@@ -14,22 +14,26 @@
 #define MAX_MIXIN 100
 #define MAX_OBJCLASS 100
 
-#define MIXIN(id, compat, descr) { if(mixin_pointer >= MAX_MIXIN) return; add_mixin(mixin_pointer, id, compat, descr);\
-                                    mixin_pointer++; }
+#define MIXIN(id, compat, descr) add_mixin(&mixin_pointer, id, compat, descr);
 
-#define OBJCLASS(pn, flag, sym) { if(objclass_pointer >= MAX_OBJCLASS) return;\
-                                        add_objclass(objclass_pointer, pn, flag, sym); objclass_pointer++; }
+#define OBJCLASS(pn, flag, sym) add_objclass(&objclass_pointer, pn, flag, sym);
 
 Mixin mixins_list[MAX_MIXIN];
 int nb_mixins;
 ObjectClass objclasses_list[MAX_OBJCLASS];
 int nb_objclass;
 
-void add_mixin(int position, Mixin_type id, int compatible_classes, char *desc)
+void add_mixin(int *position, Mixin_type id, int compatible_classes, char *desc)
 {
-    mixins_list[position].id = id;
-    mixins_list[position].compatible_classes = compatible_classes;
-    mixins_list[position].descr = desc;
+    if (*position > MAX_MIXIN) {
+        print_to_log("Tried to register too many mixins\n");
+        return;
+    }
+
+    mixins_list[*position].id = id;
+    mixins_list[*position].compatible_classes = compatible_classes;
+    mixins_list[*position].descr = desc;
+    (*position)++;
 }
 
 void init_mixins()
@@ -116,11 +120,18 @@ int pick_mixin(ObjectClassFlag class_flag)
 }
 
 
-void add_objclass(int objclass_pointer, char *possible_names, ObjectClassFlag flag, char symbol)
+void add_objclass(int *objclass_pointer, char *possible_names, ObjectClassFlag flag, char symbol)
 {
-    objclasses_list[objclass_pointer].possible_names = possible_names;
-    objclasses_list[objclass_pointer].o_class_flag = flag;
-    objclasses_list[objclass_pointer].symbol = symbol;
+    if (*objclass_pointer > MAX_OBJCLASS) {
+        print_to_log("Tried to register too many object classes\n");
+        return;
+    }
+
+    objclasses_list[*objclass_pointer].possible_names = possible_names;
+    objclasses_list[*objclass_pointer].o_class_flag = flag;
+    objclasses_list[*objclass_pointer].symbol = symbol;
+
+    (*objclass_pointer)++;
 }
 
 
@@ -296,4 +307,23 @@ void add_level_objects(int level)
         obj->level = level;
         add_to_linked_list(o_list, (void *) obj);
     }
+}
+
+LinkedList *find_objs_at(int x, int y, int level)
+{
+    LinkedList *ret = new_linked_list();
+    LinkedListNode *obj_node = o_list->head;
+
+    if (!obj_node)
+        return NULL; /* Be careful with that one ! */
+
+    while (obj_node != NULL) {
+        Object *obj = (Object *) obj_node->element;
+        if (obj->posx == x && obj->posy == y && obj->level == level)
+            add_to_linked_list(ret, obj);
+
+        obj_node = obj_node->next;
+    }
+
+    return ret;
 }

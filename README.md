@@ -45,10 +45,10 @@ Contrary to items, they are predefined.
 ## TODO
 
 1. Inventory management (mostly complete)
-2. Raytracing algorithm for LOS and combat
 3. Monster generation and movement
 4. Combat implementation
 5. Object frequency tweaking, allow single or no mixin.
+6. More interesting RNG distributions
 
 ## Mixins reference
 

@@ -19,7 +19,6 @@ set(SOURCE_FILES
         src/linkedlist.c
         src/linkedlist.h
         src/turn.c
-        src/path.c
         src/inv.c)
 
 add_executable(opmorl ${SOURCE_FILES})

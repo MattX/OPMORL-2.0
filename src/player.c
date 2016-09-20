@@ -36,6 +36,10 @@ int change_dlvl(int to_dlvl, int place_on)
         rodney.dlvl = to_dlvl;
         rodney.posx = new_x;
         rodney.posy = new_y;
+
+        if (!visited[rodney.dlvl])
+            make_monsters(rodney.dlvl, -1);
+
         return 1;
     }
 }

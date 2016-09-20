@@ -28,9 +28,9 @@ const int min_size_y = 3;
  * Returns the number of available tiles satisfying the constraints. Stores the coordinates of the
  * empty tile in x and y.
  */
-int find_floor_tile(int level, int *x, int *y, int tile_types, int can_have_mon)
+int find_floor_tile(int level, int *x, int *y, int tile_types, bool can_have_mon)
 {
-    int avail[LEVEL_HEIGHT][LEVEL_WIDTH];
+    bool avail[LEVEL_HEIGHT][LEVEL_WIDTH];
     int nb_avail = 0;
     int i_selected;
 
@@ -38,13 +38,13 @@ int find_floor_tile(int level, int *x, int *y, int tile_types, int can_have_mon)
         for (int i_y = 0; i_y < LEVEL_WIDTH; i_y++) {
             if (lvl_map[level][i_x][i_y] & tile_types) {
                 if (!can_have_mon && find_mon_at(level, i_x, i_y) != NULL)
-                    avail[i_x][i_y] = 0;
+                    avail[i_x][i_y] = false;
                 else {
-                    avail[i_x][i_y] = 1;
+                    avail[i_x][i_y] = true;
                     nb_avail++;
                 }
             } else
-                avail[i_x][i_y] = 0;
+                avail[i_x][i_y] = false;
         }
     }
 

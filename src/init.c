@@ -38,6 +38,7 @@ void init_colors() {
     init_pair(CLR_BLUE, COLOR_BLUE, DEFAULT_BACKCOLOR);
     init_pair(CLR_RED, COLOR_RED, DEFAULT_BACKCOLOR);
     init_pair(CLR_CYAN, COLOR_CYAN, DEFAULT_BACKCOLOR);
+    init_pair(CLR_GREEN, COLOR_GREEN, DEFAULT_BACKCOLOR);
 }
 
 void exit_ncurses() {
@@ -56,6 +57,7 @@ void init_game()
 {
     srand((unsigned int) time(NULL));
 
+    init_monsters();
     make_objects();
 
     rodney.gold = rodney.exp = 0;

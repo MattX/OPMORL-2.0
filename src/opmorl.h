@@ -31,7 +31,7 @@
 #define DEFAULT_BACKCOLOR -1
 #define DEFAULT_FORECOLOR -1
 
-#define LEVELS 3
+#define LEVELS 25
 #define LEVEL_WIDTH 80
 #define LEVEL_HEIGHT 21
 
@@ -99,6 +99,7 @@ typedef struct
 
     ObjectClassFlag o_class_flag;
     char symbol;
+    int prob;
 } ObjectClass;
 
 typedef struct
@@ -113,6 +114,7 @@ typedef struct
     int mixin2;
     int magic_class;
     Color color;
+    int prob;
 } ObjectType;
 
 
@@ -168,8 +170,10 @@ typedef struct
     MonTypeTag tag; /* For lookups */
 
     int max_hp;
-    int magic_class;
+    MagicClassTag magic_class;
     char symbol;
+    int prob;
+    int level;
 } MonType; /* Monster type */
 
 typedef enum
@@ -186,7 +190,7 @@ typedef struct s_monster
 	int posx, posy, level;
     int hp;
     int move_timeout; /* How much time before unfreezing/waking/etc. */
-    MonFlags flags; /* Such as invisible, flying ... */
+    int flags; /* Such as invisible, flying ... */
 } Monster;
 
 MonType monster_types[MAX_NB_MONSTERS];
@@ -237,7 +241,7 @@ void game_loop();
 void exit_game();
 void exit_ncurses();
 
-int find_floor_tile(int, int *, int *, int, int);
+int find_floor_tile(int, int *, int *, int, bool);
 
 void create_level(int);
 
@@ -255,14 +259,16 @@ void display_stats();
 
 Object *select_object(LinkedList *objects);
 
-void add_object(Object *);
-void add_monster(Monster *);
-void rm_mon_at(int, int, int);
+void init_monsters();
+
+void make_monsters(int levels, int nb);
 Monster *find_mon_at(int, int, int);
 
 LinkedList *find_objs_at(int, int, int);
 
 int rand_int(int, int);
+
+int ndn(int, int);
 int min(int, int);
 int max(int, int);
 int sign(int);
@@ -303,6 +309,7 @@ typedef enum
 
 TileType lvl_map[LEVELS][LEVEL_HEIGHT][LEVEL_WIDTH];
 TileStatus visibility_map[LEVELS][LEVEL_HEIGHT][LEVEL_WIDTH];
+bool visited[LEVELS];
 Player rodney;
 int turn;
 

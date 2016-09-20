@@ -89,7 +89,7 @@ void display_map()
             attron(COLOR_PAIR(obj->type->color));
             mvaddch(obj->posx + 1, obj->posy, obj->type->class->symbol);
             attroff(COLOR_PAIR(obj->type->color));
-        } while ((obj_node = obj_node->next));
+        } while ((obj_node = obj_node->next) != NULL);
 
     /* Monsters */
     if (mon_node)
@@ -99,9 +99,9 @@ void display_map()
                 continue;
 
             attron(COLOR_PAIR(magic_class_colors[mon->type->magic_class]));
-            mvaddch(mon->posx + 1, mon->posy, mon->type->symbol);
+            mvaddch(mon->posx, mon->posy, mon->type->symbol);
             attroff(COLOR_PAIR(magic_class_colors[mon->type->magic_class]));
-        } while ((mon_node = mon_node->next));
+        } while ((mon_node = mon_node->next) != NULL);
 
     /* Rodney */
     attron(COLOR_PAIR(rodney.color));
