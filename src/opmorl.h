@@ -18,7 +18,8 @@
 #include <time.h>
 #include <stdbool.h>
 
-#include <ncurses.h>
+// #include <ncurses.h>
+#include <curses.h>
 
 #include "linkedlist.h"
 
@@ -49,8 +50,13 @@
 typedef enum e_color
 {
     CLR_DEFAULT = 0, /* COLOR_PAIR(0) is the default back/fore ground colors */
-    CLR_WHITE = 1,
-    CLR_YELLOW = 2
+    CLR_WHITE,
+    CLR_YELLOW,
+    CLR_BLUE,
+    CLR_MAGENTA,
+    CLR_CYAN,
+    CLR_RED,
+    CLR_GREEN,
 } Color;
 /* Here we have stuff like CLR_ORANGE or whatever, that we have initialized in init_color, and then we	*
  * just have, before printing a monster/object, to call attron(COLOR_PAIR(obj->color)); and attroff().	*/
@@ -60,8 +66,15 @@ typedef enum e_color
 
 // Magic classes
 #define NB_MAGIC_CLASSES 5
-int magic_class_weakness[NB_MAGIC_CLASSES][NB_MAGIC_CLASSES];
+extern bool magic_class_strengths[NB_MAGIC_CLASSES][NB_MAGIC_CLASSES];
 extern char *magic_class_names[NB_MAGIC_CLASSES];
+extern char *magic_class_adjectives[NB_MAGIC_CLASSES];
+extern Color magic_class_colors[NB_MAGIC_CLASSES];
+
+typedef enum
+{
+    MC_EVOK = 0, MC_CONJ = 1, MC_NECRO = 2, MC_ILLU = 3, MC_TRANS = 4,
+} MagicClassTag;
 
 
 #define NB_OT 8
@@ -110,6 +123,7 @@ typedef enum
     MT_AT_SMALL, MT_AT_LARGE, MT_AT_SPLIT, MT_AT_CRITICAL, MT_AT_MATCH, MT_AT_FREEZE, MT_AT_EXP, MT_AT_RAGE,
     MT_DF_SMALL, MT_DF_CRITICAL, MT_DF_WEAKNESS, MT_DF_BLOWBACK, MT_DF_REFLECTION, MT_DF_MELEE,
     MT_US_TP, MT_US_LEVELPORT, MT_US_MAP, MT_US_HP, MT_US_MAX_HP, MT_US_INT, MT_US_STR, MT_US_DEX, MT_US_OPEN,
+    MT_US_DIG,
 } Mixin_type; // To be able to quickly check a mixin
 
 
@@ -142,30 +156,41 @@ void add_level_objects(int level);
 
 /****** MONSTERS ******/
 
-
-typedef struct
-{
-} Mtype; /* Monster type */
+#define MAX_NB_MONSTERS 200
 
 typedef enum
 {
-    MT_INVISIBLE,
-    MT_ASLEEP,
-    MT_FROZEN,
-} Mflags;
+    MON_RAT,
+} MonTypeTag;
+
+typedef struct
+{
+    MonTypeTag tag; /* For lookups */
+
+    int max_hp;
+    int magic_class;
+    char symbol;
+} MonType; /* Monster type */
+
+typedef enum
+{
+    MF_INVISIBLE,
+    MF_ASLEEP,
+    MF_FROZEN,
+} MonFlags;
 
 typedef struct s_monster
 {
-    Mtype type;
+    MonType *type;
 
 	int posx, posy, level;
-	int life_points;
+    int hp;
     int move_timeout; /* How much time before unfreezing/waking/etc. */
-    Mflags flags; /* Such as invisible, flying ... */
-
-	char symbol;
-	Color color; /* to be used with COLOR_PAIR(color) */
+    MonFlags flags; /* Such as invisible, flying ... */
 } Monster;
+
+MonType monster_types[MAX_NB_MONSTERS];
+int nb_monster_types;
 
 
 /************/
@@ -192,6 +217,7 @@ typedef struct {
 	int hp, max_hp;
     int dlvl; /* The depth in the dungeon or whatever you may call it */
 	int dexterity, strength, constitution, intelligence, wisdom, charisma; /* Stats */
+    int magic_class;
 
     Object *inventory[INVENTORY_SIZE];
     Object *wielded;
@@ -214,6 +240,8 @@ void exit_ncurses();
 int find_floor_tile(int, int *, int *, int, int);
 
 void create_level(int);
+
+void recompute_visibility();
 
 char get_input();
 
@@ -261,14 +289,20 @@ char slot_to_letter(int);
 int add_to_inventory(Object *obj);
 
 int pickup();
-
 int drop();
-
 int dump_inventory();
 
 /* Globals */
 
+typedef enum
+{
+    TS_UNDISCOVERED,
+    TS_UNSEEN,
+    TS_SEEN
+} TileStatus;
+
 TileType lvl_map[LEVELS][LEVEL_HEIGHT][LEVEL_WIDTH];
+TileStatus visibility_map[LEVELS][LEVEL_HEIGHT][LEVEL_WIDTH];
 Player rodney;
 int turn;
 

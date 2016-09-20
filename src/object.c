@@ -25,9 +25,6 @@ int nb_mixins;
 ObjectClass objclasses_list[MAX_OBJCLASS];
 int nb_objclass;
 
-char *magic_class_names[NB_MAGIC_CLASSES] = {"Defas", "Quessara", "Nalpure", "Hexteria", "Bronea"};
-
-
 void add_mixin(int position, Mixin_type id, int compatible_classes, char *desc)
 {
     mixins_list[position].id = id;
@@ -49,18 +46,18 @@ void init_mixins()
     MIXIN(MT_AT_SMALL, OT_MELEE | OT_WAND, "cowardice");
 
     MIXIN(MT_DF_BLOWBACK, OT_MELEE | OT_WAND | OT_BODY_ARMOR | OT_HELM, "blowback");
-    MIXIN(MT_DF_CRITICAL, OT_MELEE | OT_WAND | OT_BODY_ARMOR | OT_HELM, "stress reduction");
-    MIXIN(MT_DF_MELEE, OT_MELEE | OT_WAND | OT_BODY_ARMOR | OT_HELM, "close-range quickness");
+    MIXIN(MT_DF_CRITICAL, OT_MELEE | OT_WAND | OT_BODY_ARMOR | OT_HELM, "calm");
+    MIXIN(MT_DF_MELEE, OT_MELEE | OT_WAND | OT_BODY_ARMOR | OT_HELM, "blunt force");
     MIXIN(MT_DF_REFLECTION, OT_MELEE | OT_WAND | OT_BODY_ARMOR | OT_HELM, "reflection");
-    MIXIN(MT_DF_SMALL, OT_MELEE | OT_WAND | OT_BODY_ARMOR | OT_HELM, "triviality reduction");
-    MIXIN(MT_DF_WEAKNESS, OT_MELEE | OT_WAND | OT_BODY_ARMOR | OT_HELM, "uniform protection");
+    MIXIN(MT_DF_SMALL, OT_MELEE | OT_WAND | OT_BODY_ARMOR | OT_HELM, "nontriviality");
+    MIXIN(MT_DF_WEAKNESS, OT_MELEE | OT_WAND | OT_BODY_ARMOR | OT_HELM, "uniformity");
 
     MIXIN(MT_BG_DEX, OT_ALL, "dexterity");
     MIXIN(MT_BG_INT, OT_ALL, "wisdom");
     MIXIN(MT_BG_STR, OT_ALL, "power");
-    MIXIN(MT_BG_EMERGPORT, OT_ALL, "turning away");
-    MIXIN(MT_BG_HP, OT_ALL, "good shape");
-    MIXIN(MT_BG_REGEN, OT_ALL, "health");
+    MIXIN(MT_BG_EMERGPORT, OT_ALL, "vanishing");
+    MIXIN(MT_BG_HP, OT_ALL, "health");
+    MIXIN(MT_BG_REGEN, OT_ALL, "exercise");
     MIXIN(MT_BG_TELEPATHY, OT_ALL, "ESP");
     MIXIN(MT_BG_ID, OT_ALL, "identification");
     MIXIN(MT_BG_SPEED, OT_ALL, "swiftness");
@@ -75,6 +72,7 @@ void init_mixins()
     MIXIN(MT_US_INT, OT_POTION, "smartness");
     MIXIN(MT_US_TP, OT_ALL, "ubiquity");
     MIXIN(MT_US_STR, OT_POTION, "force");
+    MIXIN(MT_US_DIG, OT_ALL, "digging");
 
     nb_mixins = mixin_pointer;
 
@@ -261,6 +259,7 @@ void make_objects()
         char *name_prefix = pick_name(class);
 
         object_types[i].class = class;
+        object_types[i].magic_class = rand_int(0, NB_MAGIC_CLASSES - 1);
 
         object_types[i].mixin1 = pick_mixin(class_flag);
         object_types[i].mixin2 = pick_mixin(class_flag);
@@ -271,7 +270,8 @@ void make_objects()
 
         char *mixin1desc = find_mixin(object_types[i].mixin1)->descr;
         char *mixin2desc = find_mixin(object_types[i].mixin2)->descr;
-        snprintf(object_types[i].name, MAX_NAME, "%s of %s and %s", name_prefix, mixin1desc, mixin2desc);
+        snprintf(object_types[i].name, MAX_NAME, "%s %s of %s and %s", magic_class_names[object_types[i].magic_class],
+                 name_prefix, mixin1desc, mixin2desc);
         free(name_prefix);
     }
 }

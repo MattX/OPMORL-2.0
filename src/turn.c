@@ -70,5 +70,7 @@ void process_turn(char c)
     default:
         break;
     }
+
+    recompute_visibility();
 }
 

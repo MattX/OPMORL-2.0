@@ -22,11 +22,26 @@ int move_rodney(int newx, int newy)
     return 1;
 }
 
-// TODO: refactor to reduce code repetition
-int use_stairs(int up)
+int change_dlvl(int to_dlvl, int place_on)
 {
     int new_x, new_y;
 
+    if (!find_floor_tile(to_dlvl, &new_x, &new_y, place_on, 0)) {
+        if (find_mon_at(to_dlvl, new_x, new_y))
+            pline("The staircase is blocked by a monster.");
+        else // There is no up staircase on the level below
+            pline("The staircase is blocked by debris from its collapsed roof.");
+        return 0;
+    } else {
+        rodney.dlvl = to_dlvl;
+        rodney.posx = new_x;
+        rodney.posy = new_y;
+        return 1;
+    }
+}
+
+int use_stairs(int up)
+{
     if (up) {
         if (lvl_map[rodney.dlvl][rodney.posx][rodney.posy] != T_STAIRS_UP) {
             pline("You can't go up here!");
@@ -40,18 +55,7 @@ int use_stairs(int up)
             else
                 pline("Ok");
         } else {
-            if (!find_floor_tile(rodney.dlvl - 1, &new_x, &new_y, T_STAIRS_DOWN, 0)) {
-                if (find_mon_at(rodney.dlvl - 1, new_x, new_y))
-                    pline("The staircase is blocked by a monster.");
-                else // There is no up staircase on the level below
-                    pline("The staircase is blocked by debris from its collapsed roof.");
-                return 0;
-            } else {
-                rodney.dlvl--;
-                rodney.posx = new_x;
-                rodney.posy = new_y;
-                return 1;
-            }
+            return change_dlvl(rodney.dlvl - 1, T_STAIRS_DOWN);
         }
     }
     else {
@@ -59,18 +63,7 @@ int use_stairs(int up)
             pline("You can't go down here!");
             return 0;
         } else {
-            if (!find_floor_tile(rodney.dlvl + 1, &new_x, &new_y, T_STAIRS_UP, 0)) {
-                if (find_mon_at(rodney.dlvl + 1, new_x, new_y))
-                    pline("The staircase is blocked by a monster.");
-                else // There is no up staircase on the level below
-                    pline("The staircase is blocked by debris from its collapsed roof.");
-                return 0;
-            } else {
-                rodney.dlvl++;
-                rodney.posx = new_x;
-                rodney.posy = new_y;
-                return 1;
-            }
+            return change_dlvl(rodney.dlvl + 1, T_STAIRS_UP);
         }
     }
 

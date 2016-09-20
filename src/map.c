@@ -262,23 +262,56 @@ void create_level(int level)
 
     // Add objects
     add_level_objects(level);
+
+    // Set visibility map
+    for (i_x = 0; i_x < LEVEL_HEIGHT; i_x++)
+        for (i_y = 0; i_y < LEVEL_WIDTH; i_y++)
+            visibility_map[level][i_x][i_y] = TS_UNDISCOVERED;
 }
 
 /*
- * Bresenham raytracer
+ * Bresenham-like raytracer
  */
-int is_visible(int level, int from_x, int from_y, int to_x, int to_y)
+void set_visible(int level, int from_x, int from_y, int to_x, int to_y)
 {
-    // If needed, swap to and from to make sure we go left to right.
-    if (from_y > to_y) {
-        int tmp = from_x;
-        from_x = to_x;
-        to_x = tmp;
+    int dx = abs(to_x - from_x);
+    int sx = sign(to_x - from_x);
+    int dy = abs(to_y - from_y);
+    int sy = sign(to_y - from_y);
+    int error = (dx > dy ? dx : -dy) / 2;
+    int old_error;
 
-        tmp = from_y;
-        from_y = to_y;
-        to_y = tmp;
+    int cur_x = from_x, cur_y = from_y;
+    bool blocked = false;
+
+    while (1) {
+        if (blocked && visibility_map[rodney.dlvl][cur_x][cur_y] == TS_SEEN)
+            visibility_map[rodney.dlvl][cur_x][cur_y] = TS_UNSEEN;
+        if (!blocked)
+            visibility_map[rodney.dlvl][cur_x][cur_y] = TS_SEEN;
+
+        if (lvl_map[level][cur_x][cur_y] & ~T_WALKABLE)
+            blocked = true;
+
+        if (cur_x == to_x && cur_y == to_y)
+            break;
+
+        old_error = error;
+        if (old_error > -dx) {
+            error -= dy;
+            cur_x += sx;
+        }
+        if (old_error < dy) {
+            error += dx;
+            cur_y += sy;
+        }
     }
+}
 
-
+void recompute_visibility()
+{
+    for (int i_x = 0; i_x < LEVEL_HEIGHT; i_x++)
+        for (int i_y = 0; i_y < LEVEL_WIDTH; i_y++)
+            if (i_x == 0 || i_x == LEVEL_HEIGHT - 1 || i_y == 0 || i_y == LEVEL_WIDTH - 1)
+                set_visible(rodney.dlvl, rodney.posx, rodney.posy, i_x, i_y);
 }

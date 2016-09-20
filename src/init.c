@@ -34,7 +34,10 @@ void init_colors() {
 	use_default_colors();
 	init_pair(CLR_WHITE, COLOR_WHITE, DEFAULT_BACKCOLOR); /* broken by the enum, wtf */
     init_pair(CLR_YELLOW, COLOR_YELLOW, DEFAULT_BACKCOLOR);
-	/* et alii colori */
+    init_pair(CLR_MAGENTA, COLOR_MAGENTA, DEFAULT_BACKCOLOR);
+    init_pair(CLR_BLUE, COLOR_BLUE, DEFAULT_BACKCOLOR);
+    init_pair(CLR_RED, COLOR_RED, DEFAULT_BACKCOLOR);
+    init_pair(CLR_CYAN, COLOR_CYAN, DEFAULT_BACKCOLOR);
 }
 
 void exit_ncurses() {
@@ -64,7 +67,7 @@ void init_game()
     rodney.dexterity = rand_int(12, 18);
     rodney.wisdom = rand_int(12, 18);
     rodney.body_armor = rodney.wielded = rodney.helm = NULL;
-
+    rodney.magic_class = rand_int(0, NB_MAGIC_CLASSES - 1);
 
     rodney.color = CLR_WHITE;
 
@@ -85,8 +88,14 @@ void init_game()
         create_level(i_level);
 
     rodney.dlvl = 0;
-    if (!find_floor_tile(rodney.dlvl, &rodney.posx, &rodney.posy, T_WALKABLE, 0)) {
+    if (!find_floor_tile(rodney.dlvl, &rodney.posx, &rodney.posy, T_STAIRS_UP, 0)) {
         pline("Panic: Could not add Rodney!");
         exit_game();
     }
+
+    recompute_visibility();
+
+    pline("Welcome to OPMORL !");
+    pline("You are a novice %s on your final training.", magic_class_names[rodney.magic_class]);
+    pline("Your goal is to escape this dungeon with as much gold as you can.");
 }

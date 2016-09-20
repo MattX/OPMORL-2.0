@@ -35,6 +35,14 @@ void display_map()
     attron(COLOR_PAIR(DEFAULT));
     for (i = 0; i < LEVEL_HEIGHT; i++) {
         for (j = 0; j < LEVEL_WIDTH; j++) {
+            if (visibility_map[rodney.dlvl][i][j] == TS_UNDISCOVERED) {
+                mvaddch(i + 1, j, ' ');
+                continue;
+            }
+
+            if (visibility_map[rodney.dlvl][i][j] == TS_SEEN)
+                attron(A_BOLD);
+
             switch (lvl_map[rodney.dlvl][i][j]) {
             case T_CLOSED_DOOR:
                 mvaddch(i + 1, j, '+');
@@ -63,15 +71,19 @@ void display_map()
                 mvaddch(i + 1, j, ' ');
                 break;
             }
+
+            if (visibility_map[rodney.dlvl][i][j] == TS_SEEN)
+                attroff(A_BOLD);
         }
     }
 
     attroff(COLOR_PAIR(DEFAULT));
     /* Objects */
+    // TODO: add memory for object positions
     if (obj_node)
         do {
             Object *obj = (Object *) obj_node->element;
-            if (obj->level != rodney.dlvl)
+            if (obj->level != rodney.dlvl || visibility_map[rodney.dlvl][obj->posx][obj->posy] == TS_UNDISCOVERED)
                 continue;
 
             attron(COLOR_PAIR(obj->type->color));
@@ -83,10 +95,12 @@ void display_map()
     if (mon_node)
         do {
             Monster *mon = (Monster *) mon_node->element;
+            if (mon->level != rodney.dlvl || visibility_map[rodney.dlvl][mon->posx][mon->posy] != TS_SEEN)
+                continue;
 
-            attron(COLOR_PAIR(mon->color));
-            mvaddch(mon->posx + 1, mon->posy, mon->symbol);
-            attroff(COLOR_PAIR(mon->color));
+            attron(COLOR_PAIR(magic_class_colors[mon->type->magic_class]));
+            mvaddch(mon->posx + 1, mon->posy, mon->type->symbol);
+            attroff(COLOR_PAIR(magic_class_colors[mon->type->magic_class]));
         } while ((mon_node = mon_node->next));
 
     /* Rodney */
@@ -230,8 +244,7 @@ Object *select_object(LinkedList *objects)
                 if (cur != NULL) {
                     selected = cur->element;
                     break;
-                }
-                else
+                } else
                     pline("You don't have item %c", selection);
             } else
                 pline("Invalid command");
