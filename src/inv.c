@@ -74,8 +74,13 @@ int pickup()
         ret = select_object(cur_objects);
 
     delete_linked_list(cur_objects);
+
     if (ret != NULL) {
-        if ((slot = add_to_inventory(ret)) != -1) {
+        if (ret->type->class->o_class_flag == OT_MONEY) {
+            rodney.gold += ret->amount;
+            delete_from_linked_list(o_list, ret);
+            free(ret);
+        } else if ((slot = add_to_inventory(ret)) != -1) {
             pline("%c - %s", slot_to_letter(slot), ret->type->name);
             delete_from_linked_list(o_list, ret);
             elapsed = 1;

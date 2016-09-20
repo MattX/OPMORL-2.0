@@ -34,6 +34,11 @@ int abs(int a)
     return a < 0 ? -a : a;
 }
 
+double abs_d(double a)
+{
+    return a < 0 ? -a : a;
+}
+
 int sign(int a)
 {
     if (a >= 0)

@@ -48,6 +48,7 @@ Contrary to items, they are predefined.
 2. Raytracing algorithm for LOS and combat
 3. Monster generation and movement
 4. Combat implementation
+5. Object frequency tweaking, allow single or no mixin.
 
 ## Mixins reference
 

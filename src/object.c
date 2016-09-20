@@ -14,8 +14,6 @@
 #define MAX_MIXIN 100
 #define MAX_OBJCLASS 100
 
-#define NB_OBJECTS 70
-
 #define MIXIN(id, compat, descr) { if(mixin_pointer >= MAX_MIXIN) return; add_mixin(mixin_pointer, id, compat, descr);\
                                     mixin_pointer++; }
 
@@ -26,8 +24,6 @@ Mixin mixins_list[MAX_MIXIN];
 int nb_mixins;
 ObjectClass objclasses_list[MAX_OBJCLASS];
 int nb_objclass;
-
-ObjectType object_types[NB_OBJECTS];
 
 char *magic_class_names[NB_MAGIC_CLASSES] = {"Defas", "Quessara", "Nalpure", "Hexteria", "Bronea"};
 
@@ -104,7 +100,7 @@ int pick_mixin(ObjectClassFlag class_flag)
     }
 
     if (valid_mixins == 0) {
-        print_to_log("Panic: found no valid mixins for object class %d\n", class_flag);
+        print_to_log("Error: found no valid mixins for object class %d\n", class_flag);
         return -1;
     }
 
@@ -234,7 +230,7 @@ void make_objects()
         return;
     }
     gold->class = gold_class;
-    strcpy(gold->name, "gold");
+    strcpy(gold->name, "gold piece");
     gold->value = 1;
     gold->mixin1 = -1;
     gold->mixin2 = -1;

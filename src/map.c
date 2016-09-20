@@ -263,3 +263,22 @@ void create_level(int level)
     // Add objects
     add_level_objects(level);
 }
+
+/*
+ * Bresenham raytracer
+ */
+int is_visible(int level, int from_x, int from_y, int to_x, int to_y)
+{
+    // If needed, swap to and from to make sure we go left to right.
+    if (from_y > to_y) {
+        int tmp = from_x;
+        from_x = to_x;
+        to_x = tmp;
+
+        tmp = from_y;
+        from_y = to_y;
+        to_y = tmp;
+    }
+
+
+}

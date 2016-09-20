@@ -35,6 +35,8 @@
 #define LEVEL_HEIGHT 21
 
 #define INVENTORY_SIZE 52
+// Different object types
+#define NB_OBJECTS 70
 
 #define MAX_NAME 50
 #define MAX_DESCR 200
@@ -131,6 +133,8 @@ typedef struct s_object
 	int flags; /* Such as invisible... */
     int amount;
 } Object;
+
+ObjectType object_types[NB_OBJECTS];
 
 void make_objects();
 
@@ -234,6 +238,10 @@ int rand_int(int, int);
 int min(int, int);
 int max(int, int);
 int sign(int);
+
+int abs(int);
+
+double abs_d(double);
 
 void strncpy_pad(char *dest, const char *src, size_t n);
 
