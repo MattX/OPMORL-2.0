@@ -39,10 +39,36 @@ int is_empty(LinkedList *linked_list)
     return linked_list->length == 0;
 }
 
+
 /*
- * Adds an element to a linked list.
+ * Reverse a linked list
  */
-void append(LinkedList *linked_list, void *item)
+void reverse_linked_list(LinkedList *linked_list)
+{
+    if (linked_list->length < 2)
+        return;
+
+    LinkedListNode *next = NULL;
+    LinkedListNode *cur = linked_list->head->next;
+    LinkedListNode *prev = linked_list->head;
+
+    linked_list->head->next = NULL;
+
+    while (cur != NULL) {
+        next = cur->next;
+        cur->next = prev;
+        prev = cur;
+        cur = next;
+    }
+
+    linked_list->head = prev;
+}
+
+
+/*
+ * Adds an element at the beginning of a linked list.
+ */
+void add_to_linked_list(LinkedList *linked_list, void *item)
 {
     LinkedListNode *cur = linked_list->head;
     LinkedListNode *new = malloc(sizeof(LinkedListNode));
@@ -55,7 +81,7 @@ void append(LinkedList *linked_list, void *item)
 /*
  * Deletes the first instance of item from the list. Returns 1 if successful, 0 if the element was not found.
  */
-int delete(LinkedList *linked_list, void *item)
+int delete_from_linked_list(LinkedList *linked_list, void *item)
 {
     LinkedListNode *cur = linked_list->head;
     LinkedListNode *prev = linked_list->head;
@@ -84,4 +110,21 @@ int delete(LinkedList *linked_list, void *item)
     linked_list->length--;
 
     return 1;
+}
+
+
+/*
+ * If compress is true, NULL elements of the array will not be inserted
+ */
+LinkedList *array_to_linked_list(void **array, int size, bool compress)
+{
+    LinkedList *ret = new_linked_list();
+
+    for (int i = 0; i < size; i++) {
+        if (!compress || array[i] != NULL)
+            add_to_linked_list(ret, array[i]);
+    }
+
+    reverse_linked_list(ret);
+    return ret;
 }

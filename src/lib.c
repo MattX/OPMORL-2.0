@@ -50,12 +50,12 @@ void strncpy_pad(char *dest, const char *src, size_t n)
 
 void add_object(Object *obj)
 {
-    append(o_list, obj);
+    add_to_linked_list(o_list, obj);
 }
 
 void add_monster(Monster *mon)
 {
-    append(m_list, mon);
+    add_to_linked_list(m_list, mon);
 }
 
 Monster *find_mon_at(int x, int y, int level)
@@ -87,7 +87,7 @@ LinkedList *find_objs_at(int x, int y, int level)
     while (obj_node != NULL) {
         Object *obj = (Object *) obj_node->element;
         if (obj->posx == x && obj->posy == y && obj->level == level)
-            append(ret, obj);
+            add_to_linked_list(ret, obj);
 
         obj_node = obj_node->next;
     }
@@ -102,5 +102,5 @@ void rm_mon_at(int x, int y, int level)
     if ((mon = find_mon_at(x, y, level)) == NULL)
         return;
 
-    delete(m_list, mon);
+    delete_from_linked_list(m_list, mon);
 }

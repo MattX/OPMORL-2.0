@@ -3,7 +3,6 @@
 //
 
 #include "opmorl.h"
-#include "linkedlist.h"
 
 /*
  * Converts a char into an inventory letter. Returns -1 if unknown.
@@ -45,6 +44,19 @@ int add_to_inventory(Object *obj)
     return slot;
 }
 
+
+void delete_from_inventory(Object *obj)
+{
+    int slot;
+    for (slot = 0; slot < INVENTORY_SIZE; slot++) {
+        if (rodney.inventory[slot] == obj) {
+            rodney.inventory[slot] = NULL;
+            break;
+        }
+    }
+}
+
+
 int pickup()
 {
     LinkedList *cur_objects;
@@ -65,7 +77,7 @@ int pickup()
     if (ret != NULL) {
         if ((slot = add_to_inventory(ret)) != -1) {
             pline("%c - %s", slot_to_letter(slot), ret->type->name);
-            delete(o_list, ret);
+            delete_from_linked_list(o_list, ret);
             elapsed = 1;
         } else
             pline("Your pack is full.");
@@ -77,7 +89,25 @@ int pickup()
 
 int drop()
 {
-    return 0;
+    LinkedList *inventory_list = array_to_linked_list((void **) rodney.inventory, INVENTORY_SIZE, false);
+    Object *to_drop = select_object(inventory_list);
+
+    if (to_drop == NULL) {
+        pline("Never mind.");
+        delete_linked_list(inventory_list);
+        return 0;
+    }
+
+    to_drop->posx = rodney.posx;
+    to_drop->posy = rodney.posy;
+    to_drop->level = rodney.dlvl;
+
+    add_to_linked_list(o_list, to_drop);
+    delete_from_inventory(to_drop);
+
+    delete_linked_list(inventory_list);
+
+    return 1;
 }
 
 /*

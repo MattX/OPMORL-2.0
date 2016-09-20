@@ -298,6 +298,6 @@ void add_level_objects(int level)
             return;
         }
         obj->level = level;
-        append(o_list, (void *) obj);
+        add_to_linked_list(o_list, (void *) obj);
     }
 }

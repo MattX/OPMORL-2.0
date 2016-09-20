@@ -166,30 +166,55 @@ int yes_no(char *format, ...)
 // TODO: object selection window for several objects
 
 /*
- * Displays an object selection window for one object
+ * Selects the next node with non-null element. If skipped is not none, if will be incremented by the number
+ * of skipped elements
+ */
+LinkedListNode *find_not_null(LinkedListNode *node, int *skipped)
+{
+    while (node != NULL && node->element == NULL) {
+        node = node->next;
+        if (skipped != NULL)
+            *skipped += 1;
+    }
+
+    return node;
+}
+
+/*
+ * Displays an object selection window for one object. There may be NULL elements in the linked list, corresponding
+ * to empty slots from the inventory / a container.
  */
 Object *select_object(LinkedList *objects)
 {
-    LinkedListNode *top = objects->head; // Which object is the first on the current page
+    LinkedListNode *top = NULL; // Which object is the first on the current page
     LinkedListNode *next_top = objects->head; // Which object is the first on the next page
-    LinkedListNode *cur = top;
-    int selected = -1;
+    LinkedListNode *cur = NULL;
+    Object *selected = NULL;
+    int slot = -1;
+    int non_null_i = 0;
 
-    while (selected == -1) {
-        int items_displayed = 0;
+    while (selected == NULL) {
+        top = next_top;
+        cur = find_not_null(top, &non_null_i);
+
         for (int i = 0; i < WINDOW_HEIGHT - 1; i++) {
             if (cur == NULL)
                 break;
-            mvprintw(i + 1, 0, "%c - %s", slot_to_letter(i), ((Object *) cur->element)->type->name);
+
+            mvprintw(i + 1, 0, "%c - %s", slot_to_letter(non_null_i), ((Object *) cur->element)->type->name);
             clrtoeol();
-            items_displayed++;
+
             cur = cur->next;
+            non_null_i++;
+            cur = find_not_null(cur, &non_null_i);
         }
         next_top = cur;
+
         if (next_top != NULL)
             mvprintw(WINDOW_HEIGHT, 0, "<space> for next page, - to cancel");
         else
             mvprintw(WINDOW_HEIGHT, 0, "- to cancel");
+        clrtoeol();
 
         while (1) {
             int selection = getch();
@@ -197,22 +222,23 @@ Object *select_object(LinkedList *objects)
                 return NULL;
             else if (selection == ' ' && next_top != NULL)
                 break;
-            else if ((selected = letter_to_slot((char) selection)) != -1) {
-                if (selected < items_displayed)
+            else if ((slot = letter_to_slot((char) selection)) != -1) {
+                cur = top;
+                for (int i = 0; i < slot && cur != NULL; i++)
+                    cur = cur->next;
+
+                if (cur != NULL) {
+                    selected = cur->element;
                     break;
+                }
                 else
-                    pline("Unknown item %c", selection);
+                    pline("You don't have item %c", selection);
             } else
                 pline("Invalid command");
         }
     }
 
-    cur = top;
-    // This is guaranteed not to shit itself because we checked the number of items displayed
-    for (int i = 0; i < selected; i++)
-        cur = cur->next;
-
-    return (Object *) cur->element;
+    return selected;
 }
 
 void print_to_log(char *format, ...)

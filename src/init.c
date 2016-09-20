@@ -13,7 +13,7 @@
 
 void init_ncurses() {
 	initscr();
-	raw();
+    cbreak();
 	keypad(stdscr, TRUE);
 	noecho();
 
