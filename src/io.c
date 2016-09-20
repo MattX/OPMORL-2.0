@@ -9,6 +9,8 @@
 
 #include "opmorl.h"
 
+// Maximum height of full screen windows like inventory selection
+#define WINDOW_HEIGHT 18
 
 char get_input()
 {
@@ -18,6 +20,9 @@ char get_input()
 void display_everything()
 {
     display_stats(); /* The stuff like health points, level et alii */
+    show_env_messages();
+    if (!line_displayed)
+        clear_msg_line();
     display_map();
 }
 
@@ -102,6 +107,12 @@ void display_stats()
              rodney.max_hp, turn);
 }
 
+void clear_msg_line()
+{
+    move(0, 0);
+    clrtoeol();
+}
+
 void va_pline(char *format, va_list args)
 {
     if (line_displayed) {
@@ -150,6 +161,58 @@ int yes_no(char *format, ...)
         if (rep == 'n' || rep == 'N')
             return 0;
     }
+}
+
+// TODO: object selection window for several objects
+
+/*
+ * Displays an object selection window for one object
+ */
+Object *select_object(LinkedList *objects)
+{
+    LinkedListNode *top = objects->head; // Which object is the first on the current page
+    LinkedListNode *next_top = objects->head; // Which object is the first on the next page
+    LinkedListNode *cur = top;
+    int selected = -1;
+
+    while (selected == -1) {
+        int items_displayed = 0;
+        for (int i = 0; i < WINDOW_HEIGHT - 1; i++) {
+            if (cur == NULL)
+                break;
+            mvprintw(i + 1, 0, "%c - %s", slot_to_letter(i), ((Object *) cur->element)->type->name);
+            clrtoeol();
+            items_displayed++;
+            cur = cur->next;
+        }
+        next_top = cur;
+        if (next_top != NULL)
+            mvprintw(WINDOW_HEIGHT, 0, "<space> for next page, - to cancel");
+        else
+            mvprintw(WINDOW_HEIGHT, 0, "- to cancel");
+
+        while (1) {
+            int selection = getch();
+            if (selection == '-')
+                return NULL;
+            else if (selection == ' ' && next_top != NULL)
+                break;
+            else if ((selected = letter_to_slot((char) selection)) != -1) {
+                if (selected < items_displayed)
+                    break;
+                else
+                    pline("Unknown item %c", selection);
+            } else
+                pline("Invalid command");
+        }
+    }
+
+    cur = top;
+    // This is guaranteed not to shit itself because we checked the number of items displayed
+    for (int i = 0; i < selected; i++)
+        cur = cur->next;
+
+    return (Object *) cur->element;
 }
 
 void print_to_log(char *format, ...)

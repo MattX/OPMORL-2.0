@@ -215,35 +215,48 @@ char get_input();
 
 void pline(char *, ...);
 
+void clear_msg_line();
 int yes_no(char *, ...);
 void display_everything();
 void display_map();
 void display_stats();
 
+Object *select_object(LinkedList *objects);
+
 void add_object(Object *);
 void add_monster(Monster *);
 void rm_mon_at(int, int, int);
-void rm_obj_at(int, int, int);
 Monster *find_mon_at(int, int, int);
-Object *find_obj_at(int, int, int);
+
+LinkedList *find_objs_at(int, int, int);
 
 int rand_int(int, int);
-
 int min(int, int);
-
 int max(int, int);
-
 int sign(int);
+
+void strncpy_pad(char *dest, const char *src, size_t n);
 
 int move_rodney(int, int);
 
 int use_stairs(int);
 
+void show_env_messages();
 void process_turn(char c);
 
 void init_mixins();
 
-void strncpy_pad(char *dest, const char *src, size_t n);
+int letter_to_slot(char);
+
+char slot_to_letter(int);
+
+int add_to_inventory(Object *obj);
+
+int pickup();
+
+int drop();
+
+int dump_inventory();
 
 /* Globals */
 

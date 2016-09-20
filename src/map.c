@@ -238,7 +238,6 @@ void create_level(int level)
 
     // Connect rooms
     for (int i = 1; i < nb_rooms; i++) {
-        print_to_log("Examining room %d on level %d\n", i, level);
         if (!connected[i]) {
             int target_room;
             do {
@@ -246,22 +245,19 @@ void create_level(int level)
             } while (!connected[target_room]);
             make_corridor(level, rooms_x[i], rooms_y[i], rooms_x[target_room], rooms_y[target_room]);
             connected[i] = true;
-
-            print_to_log("Level %d: tracing corridor from %d %d to %d %d to connect room %d\n", level,
-                         rooms_x[i], rooms_y[i], rooms_x[target_room], rooms_y[target_room], i);
         }
     }
 
     // Add stairs
     if (level != LEVELS - 1) {
         if (!find_floor_tile(level, &i_x, &i_y, T_FLOOR, 1))
-            print_to_log("Could not place stairs down!\n");
+            print_to_log("Could not place stairs down on level %d!\n", level);
         else
             lvl_map[level][i_x][i_y] = T_STAIRS_DOWN;
     }
 
     if (!find_floor_tile(level, &i_x, &i_y, T_FLOOR, 1))
-        print_to_log("Could not place stairs up!\n");
+        print_to_log("Could not place stairs up on level %d!\n", level);
     lvl_map[level][i_x][i_y] = T_STAIRS_UP;
 
     // Add objects

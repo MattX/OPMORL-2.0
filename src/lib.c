@@ -76,8 +76,9 @@ Monster *find_mon_at(int x, int y, int level)
     return NULL;
 }
 
-Object *find_obj_at(int x, int y, int level)
+LinkedList *find_objs_at(int x, int y, int level)
 {
+    LinkedList *ret = new_linked_list();
     LinkedListNode *obj_node = o_list->head;
 
     if (!obj_node)
@@ -86,12 +87,12 @@ Object *find_obj_at(int x, int y, int level)
     while (obj_node != NULL) {
         Object *obj = (Object *) obj_node->element;
         if (obj->posx == x && obj->posy == y && obj->level == level)
-            return obj;
+            append(ret, obj);
 
         obj_node = obj_node->next;
     }
 
-    return NULL;
+    return ret;
 }
 
 void rm_mon_at(int x, int y, int level)
@@ -103,14 +104,3 @@ void rm_mon_at(int x, int y, int level)
 
     delete(m_list, mon);
 }
-
-void rm_obj_at(int x, int y, int level)
-{
-    Object *obj;
-
-    if ((obj = find_obj_at(x, y, level)) == NULL)
-        return;
-
-    delete(o_list, obj);
-}
-

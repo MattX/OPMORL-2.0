@@ -24,7 +24,7 @@ void init_ncurses() {
     if (log_file == NULL)
         perror("Error opening log file: ");
 
-    fprintf(log_file, "Started OPMORL at %d\n", (int) time(NULL));
+    fprintf(log_file, "Started OPMORL %s at %d\n", STRING_V, (int) time(NULL));
 
     pline("Digging the dungeon, please wait...");
 }

@@ -2,6 +2,9 @@
 // Created by Matthieu Felix on 18/09/2016.
 //
 
+#include "opmorl.h"
+#include "linkedlist.h"
+
 /*
  * Converts a char into an inventory letter. Returns -1 if unknown.
  */
@@ -15,4 +18,79 @@ int letter_to_slot(char c)
 
     else
         return -1;
+}
+
+char slot_to_letter(int i)
+{
+    if (i < 0 || i > 51)
+        return '?';
+    else if (i < 26)
+        return (char) ('a' + i);
+    else
+        return (char) ('A' + i);
+}
+
+/*
+ * Adds an object to inventory. Returns -1 if the inventory is full, or the allocated slot otherwise.
+ */
+int add_to_inventory(Object *obj)
+{
+    int slot;
+    for (slot = 0; slot < INVENTORY_SIZE && rodney.inventory[slot] != NULL; slot++);
+
+    if (slot >= INVENTORY_SIZE) // No free slot
+        return -1;
+
+    rodney.inventory[slot] = obj;
+    return slot;
+}
+
+int pickup()
+{
+    LinkedList *cur_objects;
+    Object *ret;
+    int slot;
+    int elapsed = 0;
+
+    cur_objects = find_objs_at(rodney.posx, rodney.posy, rodney.dlvl);
+    if (cur_objects->length == 0) {
+        pline("There is nothing here");
+        return 0;
+    } else if (cur_objects->length == 1)
+        ret = cur_objects->head->element;
+    else
+        ret = select_object(cur_objects);
+
+    delete_linked_list(cur_objects);
+    if (ret != NULL) {
+        if ((slot = add_to_inventory(ret)) != -1) {
+            pline("%c - %s", slot_to_letter(slot), ret->type->name);
+            delete(o_list, ret);
+            elapsed = 1;
+        } else
+            pline("Your pack is full.");
+    } else
+        pline("Never mind.");
+
+    return elapsed;
+}
+
+int drop()
+{
+    return 0;
+}
+
+/*
+ * Temporary function before inventory display is completed
+ */
+int dump_inventory()
+{
+    print_to_log("Inventory dump\n");
+    for (int i = 0; i < INVENTORY_SIZE; i++) {
+        if (rodney.inventory[i] != NULL)
+            print_to_log("    %c - %s\n", slot_to_letter(i), rodney.inventory[i]->type->name);
+    }
+    pline("Inventory dumped");
+
+    return 0;
 }

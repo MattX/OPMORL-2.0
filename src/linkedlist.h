@@ -17,8 +17,7 @@ typedef struct s_linked_list_node {
  */
 typedef struct {
     LinkedListNode *head;
-    LinkedListNode *cur_pos;
-    LinkedListNode *prev_pos;
+    int length;
 } LinkedList;
 
 

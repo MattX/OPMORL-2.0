@@ -11,8 +11,6 @@
 
 int main(void)
 {
-    printf("OPMORL %s", STRING_V);
-
     init_ncurses();
     init_game();
     display_everything();

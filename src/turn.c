@@ -3,6 +3,7 @@
 //
 
 #include "opmorl.h"
+#include "linkedlist.h"
 
 int process_move_input(char c)
 {
@@ -25,9 +26,12 @@ int process_move_input(char c)
 
 void show_env_messages()
 {
-    Object *o;
-    if ((o = find_obj_at(rodney.posx, rodney.posy, rodney.dlvl)) != NULL)
-        pline("You see here a %s", o->type->name);
+    LinkedList *objs_on_tile = find_objs_at(rodney.posx, rodney.posy, rodney.dlvl);
+
+    if (objs_on_tile->length == 1)
+        pline("You see here a %s", ((Object *) objs_on_tile->head->element)->type->name);
+    else if (objs_on_tile->length > 1)
+        pline("You see here a %s and other objects", ((Object *) objs_on_tile->head->element)->type->name);
 }
 
 void process_turn(char c)
@@ -51,13 +55,20 @@ void process_turn(char c)
     case '<':
         turn_elapsed = use_stairs(1);
         break;
+    case ',':
+        pickup();
+        break;
+    case 'd':
+        drop();
+        break;
+    case 'i':
+        dump_inventory();
+        break;
     case 'q':
         exit_game();
         break;
     default:
         break;
     }
-
-    show_env_messages();
 }
 

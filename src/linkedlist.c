@@ -12,6 +12,7 @@ LinkedList *new_linked_list()
 {
     LinkedList *ret = malloc(sizeof(LinkedList));
     ret->head = NULL;
+    ret->length = 0;
 
     return ret;
 }
@@ -35,7 +36,7 @@ void delete_linked_list(LinkedList *linked_list)
 
 int is_empty(LinkedList *linked_list)
 {
-    return linked_list->head == NULL;
+    return linked_list->length == 0;
 }
 
 /*
@@ -48,6 +49,7 @@ void append(LinkedList *linked_list, void *item)
     new->element = item;
     new->next = linked_list->head;
     linked_list->head = new;
+    linked_list->length++;
 }
 
 /*
@@ -65,6 +67,7 @@ int delete(LinkedList *linked_list, void *item)
     if(cur->element == item) {
         linked_list->head = linked_list->head->next;
         free(cur);
+        linked_list->length--;
         return 1;
     }
 
@@ -78,6 +81,7 @@ int delete(LinkedList *linked_list, void *item)
 
     prev->next = cur->next;
     free(cur);
+    linked_list->length--;
 
     return 1;
 }
