@@ -96,25 +96,30 @@ int drop()
 {
     LinkedList *inventory_list = array_to_linked_list((void **) rodney.inventory, INVENTORY_SIZE, false);
     Object *to_drop = select_object(inventory_list);
+    int elapsed = 0;
 
     if (to_drop == NULL) {
         pline("Never mind.");
-        delete_linked_list(inventory_list);
-        return 0;
+    } else if (to_drop == rodney.wielded) {
+        pline("You can't drop something you're wielding!");
+    } else if (to_drop == rodney.helm || to_drop == rodney.body_armor) {
+        pline("You can't drop something you're wearing!");
+    } else {
+        to_drop->posx = rodney.posx;
+        to_drop->posy = rodney.posy;
+        to_drop->level = rodney.dlvl;
+
+        add_to_linked_list(o_list, to_drop);
+        delete_from_inventory(to_drop);
+
+        elapsed = 1;
     }
 
-    to_drop->posx = rodney.posx;
-    to_drop->posy = rodney.posy;
-    to_drop->level = rodney.dlvl;
-
-    add_to_linked_list(o_list, to_drop);
-    delete_from_inventory(to_drop);
-
     delete_linked_list(inventory_list);
-
-    return 1;
+    return elapsed;
 }
 
+#if 0
 /*
  * Temporary function before inventory display is completed
  */
@@ -129,3 +134,4 @@ int dump_inventory()
 
     return 0;
 }
+#endif
