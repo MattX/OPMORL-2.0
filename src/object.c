@@ -11,19 +11,18 @@
 
 #include "opmorl.h"
 
-#define MAX_MIXIN 100
-#define MAX_OBJCLASS 100
+#define MIXIN(id, compat, descr, prob) add_mixin(&mixin_pointer, id, compat, descr, prob, false);
+#define MIXIN_UTIL(id, compat, descr, prob) add_mixin(&mixin_pointer, id, compat, descr, prob, true);
 
-#define MIXIN(id, compat, descr) add_mixin(&mixin_pointer, id, compat, descr);
-
-#define OBJCLASS(pn, flag, sym) add_objclass(&objclass_pointer, pn, flag, sym);
+#define OBJCLASS(pn, flag, sym, prob) add_objclass(&objclass_pointer, pn, flag, sym, prob);
 
 Mixin mixins_list[MAX_MIXIN];
 int nb_mixins;
 ObjectClass objclasses_list[MAX_OBJCLASS];
 int nb_objclass;
 
-void add_mixin(int *position, Mixin_type id, int compatible_classes, char *desc)
+void add_mixin(int *position, Mixin_type id, int compatible_classes, char *desc,
+               int prob, bool util)
 {
     if (*position > MAX_MIXIN) {
         print_to_log("Tried to register too many mixins\n");
@@ -33,6 +32,8 @@ void add_mixin(int *position, Mixin_type id, int compatible_classes, char *desc)
     mixins_list[*position].id = id;
     mixins_list[*position].compatible_classes = compatible_classes;
     mixins_list[*position].descr = desc;
+    mixins_list[*position].prob = prob;
+    mixins_list[*position].util = util;
     (*position)++;
 }
 
@@ -40,43 +41,51 @@ void init_mixins()
 {
     int mixin_pointer = 0;
 
-    MIXIN(MT_AT_CRITICAL, OT_MELEE | OT_WAND, "lucky blows");
-    MIXIN(MT_AT_EXP, OT_MELEE | OT_WAND, "quick learning");
-    MIXIN(MT_AT_FREEZE, OT_MELEE | OT_WAND, "biting cold");
-    MIXIN(MT_AT_LARGE, OT_MELEE | OT_WAND, "prowess");
-    MIXIN(MT_AT_MATCH, OT_MELEE | OT_WAND, "consistency");
-    MIXIN(MT_AT_RAGE, OT_MELEE | OT_WAND, "last hope");
-    MIXIN(MT_AT_SPLIT, OT_MELEE | OT_WAND, "division");
-    MIXIN(MT_AT_SMALL, OT_MELEE | OT_WAND, "cowardice");
+    MIXIN(MT_AT_CRITICAL, OT_MELEE | OT_WAND | OT_FOOD, "lucky blows", 5);
+    MIXIN(MT_AT_EXP, OT_MELEE | OT_WAND | OT_FOOD, "quick learning", 5);
+    MIXIN(MT_AT_FREEZE, OT_MELEE | OT_WAND | OT_FOOD, "biting cold", 10);
+    MIXIN(MT_AT_LARGE, OT_MELEE | OT_WAND | OT_FOOD, "prowess", 15);
+    MIXIN(MT_AT_MATCH, OT_MELEE | OT_WAND | OT_FOOD, "consistency", 20);
+    MIXIN(MT_AT_RAGE, OT_MELEE | OT_WAND | OT_FOOD, "last hope", 10);
+    MIXIN(MT_AT_SPLIT, OT_MELEE | OT_WAND | OT_FOOD, "division", 20);
+    MIXIN(MT_AT_SMALL, OT_MELEE | OT_WAND | OT_FOOD, "cowardice", 20);
 
-    MIXIN(MT_DF_BLOWBACK, OT_MELEE | OT_WAND | OT_BODY_ARMOR | OT_HELM, "blowback");
-    MIXIN(MT_DF_CRITICAL, OT_MELEE | OT_WAND | OT_BODY_ARMOR | OT_HELM, "calm");
-    MIXIN(MT_DF_MELEE, OT_MELEE | OT_WAND | OT_BODY_ARMOR | OT_HELM, "blunt force");
-    MIXIN(MT_DF_REFLECTION, OT_MELEE | OT_WAND | OT_BODY_ARMOR | OT_HELM, "reflection");
-    MIXIN(MT_DF_SMALL, OT_MELEE | OT_WAND | OT_BODY_ARMOR | OT_HELM, "nontriviality");
-    MIXIN(MT_DF_WEAKNESS, OT_MELEE | OT_WAND | OT_BODY_ARMOR | OT_HELM, "uniformity");
+    MIXIN(MT_DF_BLOWBACK,
+          OT_MELEE | OT_WAND | OT_BODY_ARMOR | OT_HELM | OT_FOOD, "blowback",
+          5);
+    MIXIN(MT_DF_CRITICAL,
+          OT_MELEE | OT_WAND | OT_BODY_ARMOR | OT_HELM | OT_FOOD, "calm", 10);
+    MIXIN(MT_DF_MELEE, OT_MELEE | OT_WAND | OT_BODY_ARMOR | OT_HELM | OT_FOOD,
+          "blunt force", 20);
+    MIXIN(MT_DF_REFLECTION,
+          OT_MELEE | OT_WAND | OT_BODY_ARMOR | OT_HELM | OT_FOOD, "reflection",
+          20);
+    MIXIN(MT_DF_SMALL, OT_MELEE | OT_WAND | OT_BODY_ARMOR | OT_HELM | OT_FOOD,
+          "nontriviality", 20);
+    MIXIN(MT_DF_WEAKNESS,
+          OT_MELEE | OT_WAND | OT_BODY_ARMOR | OT_HELM | OT_FOOD, "uniformity",
+          2);
 
-    MIXIN(MT_BG_DEX, OT_ALL, "dexterity");
-    MIXIN(MT_BG_INT, OT_ALL, "wisdom");
-    MIXIN(MT_BG_STR, OT_ALL, "power");
-    MIXIN(MT_BG_EMERGPORT, OT_ALL, "vanishing");
-    MIXIN(MT_BG_HP, OT_ALL, "health");
-    MIXIN(MT_BG_REGEN, OT_ALL, "exercise");
-    MIXIN(MT_BG_TELEPATHY, OT_ALL, "ESP");
-    MIXIN(MT_BG_ID, OT_ALL, "identification");
-    MIXIN(MT_BG_SPEED, OT_ALL, "swiftness");
-    MIXIN(MT_BG_WAKE, OT_ALL, "alarm");
+    MIXIN(MT_BG_EMERGPORT, OT_ALL, "vanishing", 10);
+    MIXIN(MT_BG_HP, OT_ALL, "health", 10);
+    MIXIN(MT_BG_REGEN, OT_ALL, "exercise", 10);
+    MIXIN(MT_BG_TELEPATHY, OT_ALL, "ESP", 5);
+    MIXIN(MT_BG_ID, OT_ALL, "full knowledge", 2);
+    MIXIN(MT_BG_SPEED, OT_ALL, "swiftness", 10);
+    MIXIN(MT_BG_WAKE, OT_ALL, "alarm", 5);
+    MIXIN(MT_BG_SEE_INV, OT_ALL, "vision", 10);
 
-    MIXIN(MT_US_DEX, OT_POTION, "nimbleness");
-    MIXIN(MT_US_HP, OT_ALL, "healing");
-    MIXIN(MT_US_LEVELPORT, OT_ALL, "level change");
-    MIXIN(MT_US_MAP, OT_ALL, "level mapping");
-    MIXIN(MT_US_MAX_HP, OT_POTION, "great shape");
-    MIXIN(MT_US_OPEN, OT_ALL, "opening");
-    MIXIN(MT_US_INT, OT_POTION, "smartness");
-    MIXIN(MT_US_TP, OT_ALL, "ubiquity");
-    MIXIN(MT_US_STR, OT_POTION, "force");
-    MIXIN(MT_US_DIG, OT_ALL, "digging");
+    MIXIN_UTIL(MT_US_MAX_HP, OT_POTION, "great shape", 5);
+    MIXIN_UTIL(MT_US_ENCHANT, OT_POTION, "enchantment", 5);
+    MIXIN_UTIL(MT_US_ENLIGHTEN, OT_POTION, "enlightenment", 15);
+    MIXIN_UTIL(MT_US_LEVELPORT, OT_ALL & ~OT_FOOD, "level change", 2);
+    MIXIN_UTIL(MT_US_HP, OT_ALL & ~OT_FOOD, "healing", 15);
+    MIXIN_UTIL(MT_US_MAP, OT_ALL & ~OT_FOOD, "level mapping", 10);
+    MIXIN_UTIL(MT_US_OPEN, OT_ALL & ~OT_FOOD, "opening", 5);
+    MIXIN_UTIL(MT_US_TP, OT_ALL & ~OT_FOOD, "ubiquity", 5);
+    MIXIN_UTIL(MT_US_DIG, OT_ALL & ~OT_FOOD, "digging", 10);
+    MIXIN_UTIL(MT_US_CHMC, OT_ALL & ~OT_FOOD, "change", 4);
+    MIXIN_UTIL(MT_US_ID, OT_ALL & ~OT_FOOD, "identification", 15)
 
     nb_mixins = mixin_pointer;
 
@@ -93,26 +102,30 @@ Mixin *find_mixin(int mixin_id)
     return NULL;
 }
 
-int pick_mixin(ObjectClassFlag class_flag)
+int pick_mixin(ObjectClassFlag class_flag, int util_only)
 {
-    int valid_mixins = 0;
+    int valid_mixins_probs = 0;
     for (int i = 0; i < nb_mixins; i++) {
-        if (mixins_list[i].compatible_classes & class_flag)
-            valid_mixins++;
+        if (mixins_list[i].compatible_classes & class_flag &&
+            (!util_only || mixins_list[i].util))
+            valid_mixins_probs += mixins_list[i].prob;
     }
 
-    if (valid_mixins == 0) {
-        print_to_log("Error: found no valid mixins for object class %d\n", class_flag);
+    if (valid_mixins_probs == 0) {
+        print_to_log("Error: found no valid mixins for object class %d%s\n",
+                     class_flag,
+                     util_only ? " (util only) " : "");
         return -1;
     }
 
-    int i_chosen_mixin = rand_int(0, valid_mixins - 1);
+    int i_chosen_mixin = rand_int(0, valid_mixins_probs - 1);
     int so_far = 0;
     for (int i = 0; i < nb_mixins; i++) {
-        if (mixins_list[i].compatible_classes & class_flag) {
+        if (mixins_list[i].compatible_classes & class_flag &&
+            (!util_only || mixins_list[i].util)) {
             if (so_far == i_chosen_mixin)
                 return mixins_list[i].id;
-            so_far++;
+            so_far += mixins_list[i].prob;
         }
     }
 
@@ -120,7 +133,9 @@ int pick_mixin(ObjectClassFlag class_flag)
 }
 
 
-void add_objclass(int *objclass_pointer, char *possible_names, ObjectClassFlag flag, char symbol)
+void
+add_objclass(int *objclass_pointer, char *possible_names, ObjectClassFlag flag,
+             char symbol, int prob)
 {
     if (*objclass_pointer > MAX_OBJCLASS) {
         print_to_log("Tried to register too many object classes\n");
@@ -130,8 +145,8 @@ void add_objclass(int *objclass_pointer, char *possible_names, ObjectClassFlag f
     objclasses_list[*objclass_pointer].possible_names = possible_names;
     objclasses_list[*objclass_pointer].o_class_flag = flag;
     objclasses_list[*objclass_pointer].symbol = symbol;
-
-    (*objclass_pointer)++;
+    objclasses_list[*objclass_pointer].prob =
+            (*objclass_pointer)++;
 }
 
 
@@ -139,14 +154,16 @@ void init_objclass()
 {
     int objclass_pointer = 0;
 
-    OBJCLASS("sword,dagger,knife,spear,club,hammer,axe,battle-axe,", OT_MELEE, '\\');
-    OBJCLASS("wand,sceptre,staff,quarterstaff,orb,", OT_WAND, '/');
-    OBJCLASS("chain mail,coat,armor,", OT_BODY_ARMOR, ']');
-    OBJCLASS("helm,cask,helmet,", OT_HELM, '[');
-    OBJCLASS("potion,flask,philter,serum,elixir,", OT_POTION, '!');
-    OBJCLASS("tool,instrument,device,drive,", OT_TOOL, '(');
-    OBJCLASS("morsel,meal,ration,", OT_FOOD, '%');
-    OBJCLASS("gold piece,", OT_MONEY, '$');
+    OBJCLASS("sword,dagger,knife,spear,club,hammer,axe,battle-axe,warhammer,",
+             OT_MELEE, '\\', 20);
+    OBJCLASS("wand,sceptre,staff,quarterstaff,", OT_WAND, '/', 10);
+    OBJCLASS("chain mail,coat,armor,ring mail,", OT_BODY_ARMOR, ']', 20);
+    OBJCLASS("helm,cask,helmet,cap,hat,", OT_HELM, '[', 10);
+    OBJCLASS("potion,flask,philter,serum,elixir,", OT_POTION, '!', 8);
+    OBJCLASS("tool,instrument,device,drive,orb,", OT_TOOL, '(', 10);
+    OBJCLASS("morsel,meal,ration,", OT_FOOD, '%', 2);
+    OBJCLASS("stack of gold pieces,", OT_MONEY, '$',
+             0); // Different probability calculation
 
     nb_objclass = objclass_pointer;
 
@@ -226,7 +243,22 @@ ObjectClassFlag random_object_class()
 }
 
 
-void make_objects()
+void update_object_name(ObjectType *obj)
+{
+    snprintf(obj->name, MAX_NAME, "%s%s%s%s%s%s%s",
+             obj->magic_class_known ? magic_class_adjectives[obj->magic_class]
+                                    : "",
+             obj->magic_class_known ? " " : "",
+             obj->base_name,
+             obj->mixin1 != MT_NONE ? " of " : "",
+             obj->mixin1 != MT_NONE ? find_mixin(obj->mixin1)->descr : "",
+             (obj->mixin2 != MT_NONE && obj->mixin2_known) ? " and " : "",
+             (obj->mixin2 != MT_NONE && obj->mixin2_known) ? find_mixin(
+                     obj->mixin1)->descr : "");
+}
+
+
+void make_object_classes()
 {
     init_mixins();
     init_objclass();
@@ -241,9 +273,9 @@ void make_objects()
     gold->class = gold_class;
     strcpy(gold->name, "gold piece");
     gold->value = 1;
-    gold->mixin1 = -1;
-    gold->mixin2 = -1;
-    gold->magic_class = -1;
+    gold->mixin1 = MT_NONE;
+    gold->mixin2 = MT_NONE;
+    gold->magic_class = 0;
     gold->color = CLR_DEFAULT;
     gold->power = 0;
 
@@ -251,7 +283,9 @@ void make_objects()
     ObjectType *melee_weapon = &object_types[1];
     ObjectClass *melee_class = find_object_class(OT_MELEE);
     if (!melee_class) {
-        print_to_log("Panic: could not find object class for melee (%d)\n", OT_MELEE);
+        print_to_log(
+                "Panic: could not find object class for melee weapon (%d)\n",
+                OT_MELEE);
         return;
     }
     melee_weapon->class = melee_class;
@@ -259,8 +293,8 @@ void make_objects()
     melee_weapon->power = 5;
     melee_weapon->value = 5;
     melee_weapon->color = CLR_DEFAULT;
-    melee_weapon->mixin1 = -1;
-    melee_weapon->mixin2 = -1;
+    melee_weapon->mixin1 = MT_NONE;
+    melee_weapon->mixin2 = MT_NONE;
     melee_weapon->magic_class = rand_int(0, NB_MAGIC_CLASSES - 1);
 
     // Make the rest randomly
@@ -268,22 +302,31 @@ void make_objects()
         ObjectClassFlag class_flag = random_object_class();
         ObjectClass *class = find_object_class(class_flag);
         char *name_prefix = pick_name(class);
+        ObjectType *ot = &object_types[i];
 
-        object_types[i].class = class;
-        object_types[i].magic_class = rand_int(0, NB_MAGIC_CLASSES - 1);
+        ot->class = class;
+        ot->magic_class = rand_int(0, NB_MAGIC_CLASSES - 1);
+        ot->magic_class_known = false;
 
-        object_types[i].mixin1 = pick_mixin(class_flag);
-        object_types[i].mixin2 = pick_mixin(class_flag);
+        if (ot->class->o_class_flag & (OT_TOOL | OT_POTION))
+            ot->mixin1 = pick_mixin(class_flag, true);
+        else
+            ot->mixin1 = rand_int(1, 10) < 3 ? MT_NONE : pick_mixin(class_flag,
+                                                                    false);
 
-        object_types[i].color = CLR_DEFAULT;
-        object_types[i].power = rand_int(0, 100);
-        object_types[i].value = object_types[i].power + (rand_int(0, 20) - 10);
+        ot->mixin2 = (ot->mixin1 != MT_NONE && rand_int(1, 10) < 9) ? MT_NONE
+                                                                    : pick_mixin(
+                        class_flag, false);
+        ot->mixin2_known = false;
 
-        char *mixin1desc = find_mixin(object_types[i].mixin1)->descr;
-        char *mixin2desc = find_mixin(object_types[i].mixin2)->descr;
-        snprintf(object_types[i].name, MAX_NAME, "%s %s of %s and %s", magic_class_names[object_types[i].magic_class],
-                 name_prefix, mixin1desc, mixin2desc);
+        ot->color = CLR_DEFAULT;
+        ot->power = ndn(3, 8);
+        ot->value =
+                ot->power + rand_int(5, 25); // TODO: improve value calculation
+
+        strncpy_pad(ot->base_name, name_prefix, MAX_NAME);
         free(name_prefix);
+        update_object_name(ot);
     }
 }
 
@@ -293,13 +336,25 @@ void add_level_objects(int level)
 
     for (int i = 0; i < nb_objects; i++) {
         Object *obj = malloc(sizeof(Object));
-        ObjectType *type = &object_types[rand_int(0, NB_OBJECTS - 1)];
+        if (rand_int(1, 100) <= 20) // Money has a 20% chance
+            obj->type = &object_types[0];
+        else
+            obj->type = &object_types[rand_int(1, NB_OBJECTS - 1)];
 
-        obj->amount = 1;
         obj->cooldown = 0;
+
+        if (obj->type->class->o_class_flag == OT_MONEY)
+            obj->enchant = rand_int(10, 50);
+        else
+            obj->enchant = ndn(8, 3) / 2 - 6;
+
+        if (obj->type->class->o_class_flag == OT_POTION)
+            obj->uses_left = rand_int(1, 3);
+        else
+            obj->uses_left = -1;
+
         obj->flags = 0;
         obj->name[0] = '\0';
-        obj->type = type;
         if (!find_floor_tile(level, &obj->posx, &obj->posy, T_WALKABLE, true)) {
             print_to_log("Could not place object %d on level %d\n", i, level);
             return;

@@ -31,9 +31,10 @@ Object mixins are revealed only if the player has sufficient magic class experie
 
 Finally, mixins define define any special effects of the objects. Effect mixins provide long-lasting background effects,
 and attack, defense and use mixins produce special results when the object is used to attack, when an attack is
-received, and when the object is used, respectively. An object can have at most 2 mixins.
+received, and when the object is used, respectively. An object can have at most 2 mixins. If it exists,
+the second mixin is revealed only with identify effects.
 
-100 items types will be available on each game.
+70 items types will be available on each game.
 
 ### Monster generation
 

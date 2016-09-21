@@ -31,7 +31,7 @@
 #define DEFAULT_BACKCOLOR -1
 #define DEFAULT_FORECOLOR -1
 
-#define LEVELS 25
+#define LEVELS 21
 #define LEVEL_WIDTH 80
 #define LEVEL_HEIGHT 21
 
@@ -65,7 +65,7 @@ typedef enum e_color
 /****** OBJECTS & object mixins ******/
 
 // Magic classes
-#define NB_MAGIC_CLASSES 5
+#define NB_MAGIC_CLASSES 6
 extern bool magic_class_strengths[NB_MAGIC_CLASSES][NB_MAGIC_CLASSES];
 extern char *magic_class_names[NB_MAGIC_CLASSES];
 extern char *magic_class_adjectives[NB_MAGIC_CLASSES];
@@ -93,6 +93,7 @@ typedef enum {
 
 #define OT_ALL (~0)
 
+#define MAX_OBJCLASS 100
 typedef struct
 {
     char *possible_names; /* comma separated */
@@ -107,25 +108,44 @@ typedef struct
     ObjectClass *class;
 
     char name[MAX_NAME];
+	char base_name[MAX_NAME];
     int value;
     int power;
 
     int mixin1;
     int mixin2;
+	bool mixin2_known;
+
     int magic_class;
+	int magic_class_known;
     Color color;
-    int prob;
 } ObjectType;
 
-
+#define MAX_MIXIN 100
 typedef enum
 {
-    MT_BG_INT, MT_BG_STR, MT_BG_DEX, MT_BG_HP, MT_BG_REGEN, MT_BG_SPEED, MT_BG_WAKE, MT_BG_TELEPATHY, MT_BG_ID,
-    MT_BG_EMERGPORT,
+	MT_BG_HP,
+	MT_BG_REGEN,
+	MT_BG_SPEED,
+	MT_BG_WAKE,
+	MT_BG_TELEPATHY,
+	MT_BG_ID,
+	MT_BG_EMERGPORT,
+	MT_BG_SEE_INV,
     MT_AT_SMALL, MT_AT_LARGE, MT_AT_SPLIT, MT_AT_CRITICAL, MT_AT_MATCH, MT_AT_FREEZE, MT_AT_EXP, MT_AT_RAGE,
     MT_DF_SMALL, MT_DF_CRITICAL, MT_DF_WEAKNESS, MT_DF_BLOWBACK, MT_DF_REFLECTION, MT_DF_MELEE,
-    MT_US_TP, MT_US_LEVELPORT, MT_US_MAP, MT_US_HP, MT_US_MAX_HP, MT_US_INT, MT_US_STR, MT_US_DEX, MT_US_OPEN,
-    MT_US_DIG,
+	MT_US_TP,
+	MT_US_LEVELPORT,
+	MT_US_MAP,
+	MT_US_HP,
+	MT_US_MAX_HP,
+	MT_US_OPEN,
+	MT_US_DIG,
+	MT_US_ENCHANT,
+	MT_US_CHMC,
+	MT_US_ENLIGHTEN,
+	MT_US_ID,
+	MT_NONE = -1,
 } Mixin_type; // To be able to quickly check a mixin
 
 
@@ -134,6 +154,8 @@ typedef struct
     Mixin_type id;
     int compatible_classes;
     char *descr;
+	int prob;
+	bool util;
 } Mixin;
 
 
@@ -144,15 +166,15 @@ typedef struct s_object
     char name[MAX_NAME];
 
 	int posx, posy, level; /* Coordinates : x, y, level (we want persistent levels) */
-    int uses_left; /* For wands */
-    int cooldown;
+	int uses_left; /* For potions */
+	int cooldown; /* Effect cooldown */
+	int enchant; /* Enchant OR amount for money */
 	int flags; /* Such as invisible... */
-    int amount;
 } Object;
 
 ObjectType object_types[NB_OBJECTS];
 
-void make_objects();
+void make_object_classes();
 
 void add_level_objects(int level);
 
@@ -160,9 +182,32 @@ void add_level_objects(int level);
 
 #define MAX_NB_MONSTERS 200
 
+// For attacks and other monster properties
 typedef enum
 {
-    MON_RAT,
+	ATK_MELEE = 0x01,
+	ATK_FREEZE = 0x02,
+	ATK_FIRE = 0x04,
+	ATK_DISENCHANT = 0x08,  // Exo attack
+	ATK_RAY = 0x10,
+	ATK_TP = 0x20,            // Illus attack
+	ATK_INVIS = 0x40,        // Illus attack
+	ATK_NO_MOVE = 0x80,    // Immobile monster
+	ATK_BLOWBACK = 0x100,
+	ATK_POLYSELF = 0x200,    // Transmuter attack
+	ATK_DESTROY = 0x400,    // Transmuter attack
+	ATK_CONJURE = 0x800,    // Evoker attack
+	ATK_EVOKE = 0x1000,        // Evoker attack
+	ATK_LIFEFORCE = 0x2000, // Necro attack
+	ATK_EXPDRAIN = 0x4000,    // Necro attack
+	ATK_TIMEOUT = 0x8000,    // Exo attack
+	ATK_DROP_SWAG = 0x10000,
+} MonAtkType;
+
+
+typedef enum
+{
+	MON_RAT, MON
 } MonTypeTag;
 
 typedef struct
@@ -173,7 +218,10 @@ typedef struct
     MagicClassTag magic_class;
     char symbol;
     int prob;
-    int level;
+	int difficulty;
+	int atk_types;
+	int power;
+	int ac;
 } MonType; /* Monster type */
 
 typedef enum
@@ -189,7 +237,8 @@ typedef struct s_monster
 
 	int posx, posy, level;
     int hp;
-    int move_timeout; /* How much time before unfreezing/waking/etc. */
+	int timeout; /* How much time before unfreezing/waking/etc. */
+	int cooldown;
     int flags; /* Such as invisible, flying ... */
 } Monster;
 
@@ -214,22 +263,21 @@ typedef enum {
 #define T_ANY (~0)
 #define T_WALKABLE (T_CORRIDOR | T_OPEN_DOOR | T_FLOOR | T_STAIRS_UP | T_STAIRS_DOWN)
 
-
 typedef struct {
 	int posx, posy; /* Position */
-	int explevel, exp; /* Experience stuff */
+	int explevel; /* Experience stuff */
 	int hp, max_hp;
     int dlvl; /* The depth in the dungeon or whatever you may call it */
-	int dexterity, strength, constitution, intelligence, wisdom, charisma; /* Stats */
-    int magic_class;
+	int magic_class_exp[NB_MAGIC_CLASSES];
 
     Object *inventory[INVENTORY_SIZE];
     Object *wielded;
     Object *helm;
     Object *body_armor;
+	Mixin_type permanent_effects[MAX_MIXIN];
 	int gold;
     int score;
-	Color color;
+	int ac;
 } Player;
 
 /* Prototypes */
@@ -259,7 +307,7 @@ void display_stats();
 
 Object *select_object(LinkedList *objects);
 
-void init_monsters();
+void init_monster_types();
 
 void make_monsters(int levels, int nb);
 Monster *find_mon_at(int, int, int);

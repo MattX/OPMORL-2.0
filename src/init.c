@@ -57,31 +57,33 @@ void init_game()
 {
     srand((unsigned int) time(NULL));
 
-    init_monsters();
-    make_objects();
+    init_monster_types();
+    make_object_classes();
 
-    rodney.gold = rodney.exp = 0;
+    rodney.gold = ndn(10, 20);
     rodney.explevel = 1;
-    rodney.hp = rodney.max_hp = rand_int(12, 18);
-    rodney.charisma = rand_int(12, 18);
-    rodney.constitution = rand_int(12, 18);
-    rodney.strength = rand_int(12, 18);
-    rodney.dexterity = rand_int(12, 18);
-    rodney.wisdom = rand_int(12, 18);
+    rodney.hp = rodney.max_hp = 15;
     rodney.body_armor = rodney.wielded = rodney.helm = NULL;
-    rodney.magic_class = rand_int(0, NB_MAGIC_CLASSES - 1);
-
-    rodney.color = CLR_WHITE;
+    rodney.ac = 4;
 
     o_list = new_linked_list();
     m_list = new_linked_list();
     turn = 0;
 
+    for (int i = 0; i < NB_MAGIC_CLASSES; i++) {
+        rodney.magic_class_exp[i] = 0;
+    }
     for (int i = 0; i < INVENTORY_SIZE; i++) {
         rodney.inventory[i] = NULL;
     }
-    rodney.gold = 100;
+    Object *rodneys_basic_sword = malloc(sizeof(Object *));
+    rodneys_basic_sword->type = &object_types[1];
+    rodneys_basic_sword->enchant = 0;
+    rodneys_basic_sword->flags = 0;
+    rodneys_basic_sword->cooldown = 0;
+    rodneys_basic_sword->uses_left = -1;
 
+    rodney.inventory[0] = rodneys_basic_sword;
 
     line_displayed = 0;
     last_col = 0;
@@ -98,6 +100,6 @@ void init_game()
     recompute_visibility();
 
     pline("Welcome to OPMORL !");
-    pline("You are a novice %s on your final training.", magic_class_names[rodney.magic_class]);
-    pline("Your goal is to escape this dungeon with as much gold as you can.");
+    pline("You are a novice mage on your final training.");
+    pline("Your goal is to find the elemental amulet at the bottom of this dungeon.");
 }

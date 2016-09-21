@@ -77,7 +77,7 @@ int pickup()
 
     if (ret != NULL) {
         if (ret->type->class->o_class_flag == OT_MONEY) {
-            rodney.gold += ret->amount;
+            rodney.gold += ret->enchant;
             delete_from_linked_list(o_list, ret);
             free(ret);
         } else if ((slot = add_to_inventory(ret)) != -1) {

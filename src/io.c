@@ -99,24 +99,27 @@ void display_map()
                 continue;
 
             attron(COLOR_PAIR(magic_class_colors[mon->type->magic_class]));
-            mvaddch(mon->posx, mon->posy, mon->type->symbol);
+            mvaddch(mon->posx + 1, mon->posy, mon->type->symbol);
             attroff(COLOR_PAIR(magic_class_colors[mon->type->magic_class]));
         } while ((mon_node = mon_node->next) != NULL);
 
     /* Rodney */
-    attron(COLOR_PAIR(rodney.color));
     attron(A_BOLD);
     mvaddch(rodney.posx + 1, rodney.posy, '@');
     attroff(A_BOLD);
-    attroff(COLOR_PAIR(rodney.color));
 
     move(rodney.posx + 1, rodney.posy);
 }
 
 void display_stats()
 {
-    mvprintw(getmaxy(stdscr) - 2, 0, "St:%d Dx:%d Co:%d In:%d Wi:%d Ch:%d", rodney.strength, rodney.dexterity,
-             rodney.constitution, rodney.intelligence, rodney.wisdom, rodney.charisma);
+    int best_class = 0;
+    for (int i = 0; i < NB_MAGIC_CLASSES; i++)
+        if (rodney.magic_class_exp[i] > rodney.magic_class_exp[best_class])
+            best_class = i;
+
+    mvprintw(getmaxy(stdscr) - 2, 0, "Rodney the %s",
+             magic_class_names[best_class]);
     mvprintw(getmaxy(stdscr) - 1, 0, "Dlvl:%d\t$:%d\tHP:%d(%d)\tT:%d", rodney.dlvl + 1, rodney.gold, rodney.hp,
              rodney.max_hp, turn);
 }
