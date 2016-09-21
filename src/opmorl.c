@@ -25,7 +25,8 @@ char *magic_class_adjectives[NB_MAGIC_CLASSES] = {"neutral", "evoking",
 char *magic_class_names[NB_MAGIC_CLASSES] = {"magician", "evoker", "conjurer",
                                              "necromancer", "illusionist",
                                              "transmuter"};
-Color magic_class_colors[NB_MAGIC_CLASSES] = {CLR_GREEN, CLR_MAGENTA, CLR_RED, CLR_YELLOW, CLR_CYAN};
+Color magic_class_colors[NB_MAGIC_CLASSES] = {CLR_WHITE, CLR_GREEN, CLR_MAGENTA,
+                                              CLR_RED, CLR_YELLOW, CLR_CYAN};
 
 
 int main(void)
