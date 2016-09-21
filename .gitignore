@@ -6,3 +6,4 @@ OPMORL 2.xcodeproj/
 .idea/
 bin/
 opmorl.log
+heap.c

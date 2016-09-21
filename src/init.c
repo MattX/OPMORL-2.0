@@ -79,7 +79,7 @@ void init_game()
     for (int i = 0; i < INVENTORY_SIZE; i++) {
         rodney.inventory[i] = NULL;
     }
-    Object *rodneys_basic_sword = malloc(sizeof(Object *));
+    Object *rodneys_basic_sword = malloc(sizeof(Object));
     rodneys_basic_sword->type = &object_types[1];
     rodneys_basic_sword->enchant = 0;
     rodneys_basic_sword->flags = 0;

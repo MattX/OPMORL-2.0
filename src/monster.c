@@ -220,7 +220,7 @@ void make_monsters(int level, int nb)
 /*
  * find_mon_at: Returns the monster at (level, x, y) if there is one, or NULL.
  */
-Monster *find_mon_at(int x, int y, int level)
+Monster *find_mon_at(int level, int x, int y)
 {
     LinkedListNode *mon_node = m_list->head;
 
@@ -238,7 +238,9 @@ Monster *find_mon_at(int x, int y, int level)
     return NULL;
 }
 
-
+/*
+ * check_dead: Check if a monster is dead and take appropriate action.
+ */
 bool check_dead(Monster *target, bool rodney_killed)
 {
     if (target->hp > 0)
@@ -255,6 +257,7 @@ bool check_dead(Monster *target, bool rodney_killed)
     return true;
 }
 
+// TODO: implement :)
 void mon_attacks(Monster *mon)
 {
     pline("The %s hits!", mon->type->name);
@@ -275,11 +278,15 @@ void move_monsters()
         if (mon->type->atk_types & ATK_NO_MOVE)
             continue;
 
-        if (can_walk(rodney.dlvl, mon->posx, mon->posy, rodney.posx,
-                     rodney.posy, &new_x, &new_y)) {
+        /* First try finding a path clear of monsters; if it fails, try to
+         * find a path with monsters */
+        if (dijkstra(rodney.dlvl, mon->posx, mon->posy, rodney.posx,
+                     rodney.posy, &new_x, &new_y, false) ||
+            dijkstra(rodney.dlvl, mon->posx, mon->posy, rodney.posx,
+                     rodney.posy, &new_x, &new_y, true)) {
             if (new_x == rodney.posx && new_y == rodney.posy) {
                 mon_attacks(mon);
-            } else if (!find_mon_at(new_x, new_y, rodney.dlvl)) {
+            } else if (!find_mon_at(rodney.dlvl, new_x, new_y)) {
                 mon->posx = new_x;
                 mon->posy = new_y;
             }

@@ -38,7 +38,7 @@ find_floor_tile(int level, int *x, int *y, int tile_types, bool can_have_mon)
     for (int i_x = 0; i_x < LEVEL_HEIGHT; i_x++) {
         for (int i_y = 0; i_y < LEVEL_WIDTH; i_y++) {
             if (lvl_map[level][i_x][i_y] & tile_types) {
-                if (!can_have_mon && find_mon_at(level, i_x, i_y) != NULL)
+                if (!can_have_mon && find_mon_at(i_y, level, i_x) != NULL)
                     avail[i_x][i_y] = false;
                 else {
                     avail[i_x][i_y] = true;
@@ -169,8 +169,7 @@ void make_corridor(int level, int from_x, int from_y, int to_x, int to_y)
  * coordinates of the first tile adjacent to (from_x, from_y) in the path
  * from (from_x, from_y) to (to_x, to_y).
  */
-int can_walk(int level, int from_x, int from_y, int to_x, int to_y, int *dir_x,
-             int *dir_y)
+int can_walk(int level, int from_x, int from_y, int to_x, int to_y)
 {
     bool checked[LEVEL_HEIGHT][LEVEL_WIDTH];
     int stack_x[LEVEL_HEIGHT * LEVEL_WIDTH];
@@ -187,13 +186,6 @@ int can_walk(int level, int from_x, int from_y, int to_x, int to_y, int *dir_x,
         int cur_y = stack_y[stack_pointer];
         stack_pointer--;
         checked[cur_x][cur_y] = true;
-
-        if (abs(cur_x - from_x) <= 1 && abs(cur_y - from_y) <= 1) {
-            /* This is one of the cells that neighbour (from_x, from_y). Set
-               (dir_x, dir_y) if applicable. */
-            if (dir_x != NULL) *dir_x = cur_x;
-            if (dir_y != NULL) *dir_y = cur_y;
-        }
 
         if (cur_x == to_x && cur_y == to_y)
             return true;
@@ -251,8 +243,7 @@ void create_level(int level)
     // Check room connections
     connected[0] = true;
     for (int i = 1; i < nb_rooms; i++) {
-        if (can_walk(level, rooms_x[0], rooms_y[0], rooms_x[i], rooms_y[i],
-                     NULL, NULL))
+        if (can_walk(level, rooms_x[0], rooms_y[0], rooms_x[i], rooms_y[i]))
             connected[i] = true;
     }
 
@@ -336,4 +327,82 @@ void recompute_visibility()
             if (i_x == 0 || i_x == LEVEL_HEIGHT - 1 || i_y == 0 ||
                 i_y == LEVEL_WIDTH - 1)
                 set_visible(rodney.dlvl, rodney.posx, rodney.posy, i_x, i_y);
+}
+
+
+struct s_coord
+{
+    int x;
+    int y;
+};
+
+bool
+dijkstra(int level, int from_x, int from_y, int to_x, int to_y, int *next_x,
+         int *next_y, bool can_have_monst)
+{
+    struct s_coord tiles[2][LEVEL_HEIGHT * LEVEL_WIDTH];
+    struct s_coord prev[LEVEL_HEIGHT][LEVEL_WIDTH];
+    bool visited[LEVEL_HEIGHT][LEVEL_WIDTH];
+
+    int nb_tiles[2] = {1, 0};
+    int rotation = 0, new_rotation = 1;
+
+    if (from_x == to_x && from_y == to_y)
+        return false;
+
+    tiles[rotation][0].x = from_x;
+    tiles[rotation][0].y = from_y;
+
+    for (int i_x = 0; i_x < LEVEL_HEIGHT; i_x++)
+        for (int i_y = 0; i_y < LEVEL_WIDTH; i_y++)
+            visited[i_x][i_y] = false;
+
+    while (nb_tiles[rotation] > 0) {
+        for (int i_tile = 0; i_tile < nb_tiles[rotation]; i_tile++) {
+            int cur_x = tiles[rotation][i_tile].x;
+            int cur_y = tiles[rotation][i_tile].y;
+
+            for (int i_x = cur_x - 1; i_x <= cur_x + 1; i_x++) {
+                if (i_x < 0 || i_x > LEVEL_HEIGHT)
+                    continue;
+
+                for (int i_y = cur_y - 1; i_y <= cur_y + 1; i_y++) {
+                    if (i_y < 0 || i_y > LEVEL_WIDTH)
+                        continue;
+
+                    if (!visited[i_x][i_y] &&
+                        lvl_map[level][i_x][i_y] & T_WALKABLE &&
+                        (can_have_monst ||
+                         find_mon_at(level, i_x, i_y) == NULL)) {
+                        tiles[new_rotation][nb_tiles[new_rotation]].x = i_x;
+                        tiles[new_rotation][nb_tiles[new_rotation]].y = i_y;
+                        prev[i_x][i_y] = tiles[rotation][i_tile];
+                        visited[i_x][i_y] = true;
+                        nb_tiles[new_rotation]++;
+                    }
+
+                    if (i_x == to_x && i_y == to_y) {
+                        // Backtrack to find tile to go to
+                        struct s_coord coming_from;
+                        struct s_coord cur = {.x = i_x, .y = i_y};
+
+                        while (cur.x != from_x || cur.y != from_y) {
+                            coming_from = cur;
+                            cur = prev[cur.x][cur.y];
+                        }
+                        *next_x = coming_from.x;
+                        *next_y = coming_from.y;
+
+                        return true;
+                    }
+                }
+            }
+        }
+
+        nb_tiles[rotation] = 0;
+        rotation = !rotation;
+        new_rotation = !new_rotation;
+    }
+
+    return false;
 }

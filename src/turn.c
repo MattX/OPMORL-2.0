@@ -21,7 +21,7 @@ int process_move_input(char c)
     else if (c == 'k' || c == 'y' || c == 'u')
         to_x--;
 
-    if ((target = find_mon_at(to_x, to_y, rodney.dlvl)) != NULL) {
+    if ((target = find_mon_at(rodney.dlvl, to_x, to_y)) != NULL) {
         if (target->flags & MF_INVISIBLE) {
             pline("Wait! There's a %s here", target->type->name);
             target->flags &= ~MF_INVISIBLE;

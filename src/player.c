@@ -27,7 +27,7 @@ int change_dlvl(int to_dlvl, int place_on)
     int new_x, new_y;
 
     if (!find_floor_tile(to_dlvl, &new_x, &new_y, place_on, 0)) {
-        if (find_mon_at(to_dlvl, new_x, new_y))
+        if (find_mon_at(new_y, to_dlvl, new_x))
             pline("The staircase is blocked by a monster.");
         else // There is no up staircase on the level below
             pline("The staircase is blocked by debris from its collapsed roof.");
