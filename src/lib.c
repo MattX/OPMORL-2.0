@@ -16,6 +16,9 @@
  */
 int rand_int(int min, int max)
 {
+    if (max < min)
+        return min;
+
     return rand() % (max - min + 1) + min;
 }
 

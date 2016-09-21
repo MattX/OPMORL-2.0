@@ -218,7 +218,13 @@ Object *select_object(LinkedList *objects)
             if (cur == NULL)
                 break;
 
-            mvprintw(i + 1, 0, "%c - %s", slot_to_letter(non_null_i), ((Object *) cur->element)->type->name);
+            mvprintw(i + 1, 0, "%c - a %s", slot_to_letter(non_null_i),
+                     ((Object *) cur->element)->type->name);
+            if (cur->element == rodney.wielded)
+                printw(" (wielded)");
+            if (cur->element == rodney.helm ||
+                cur->element == rodney.body_armor)
+                printw(" (being worn)");
             clrtoeol();
 
             cur = cur->next;
@@ -228,9 +234,10 @@ Object *select_object(LinkedList *objects)
         next_top = cur;
 
         if (next_top != NULL)
-            mvprintw(WINDOW_HEIGHT, 0, "<space> for next page, - to cancel");
+            mvprintw(getcurx(stdscr) + 1, 0,
+                     "<space> for next page, - to cancel");
         else
-            mvprintw(WINDOW_HEIGHT, 0, "- to cancel");
+            mvprintw(getcurx(stdscr) + 1, 0, "- to cancel");
         clrtoeol();
 
         while (1) {

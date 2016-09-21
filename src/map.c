@@ -22,13 +22,14 @@ const int max_size_y = 15;
 const int min_size_y = 3;
 
 /*
- * Finds a random tile on the specified map level. If can_have_mon is false, the returned
- * tile will not have a monster on it. The tile will be of one of types specified in
- * tile_types.
+ * Finds a random tile on the specified map level. If can_have_mon is false, the
+ * returned tile will not have a monster on it. The tile will be of one of types
+ * specified in tile_types.
  * Returns the number of available tiles satisfying the constraints. Stores the coordinates of the
  * empty tile in x and y.
  */
-int find_floor_tile(int level, int *x, int *y, int tile_types, bool can_have_mon)
+int
+find_floor_tile(int level, int *x, int *y, int tile_types, bool can_have_mon)
 {
     bool avail[LEVEL_HEIGHT][LEVEL_WIDTH];
     int nb_avail = 0;
@@ -74,11 +75,13 @@ int find_floor_tile(int level, int *x, int *y, int tile_types, bool can_have_mon
  * Creates a room on the map. Will only put walls if there was ground, and floor if the tiles were
  * unwalkable.
  */
-void make_room(int level, int top_wall, int bottom_wall, int left_wall, int right_wall)
+void make_room(int level, int top_wall, int bottom_wall, int left_wall,
+               int right_wall)
 {
     for (int i_x = top_wall; i_x <= bottom_wall; i_x++) {
         for (int i_y = left_wall; i_y <= right_wall; i_y++) {
-            if ((i_x == top_wall || i_x == bottom_wall || i_y == left_wall || i_y == right_wall)) {
+            if ((i_x == top_wall || i_x == bottom_wall || i_y == left_wall ||
+                 i_y == right_wall)) {
                 if (lvl_map[level][i_x][i_y] == T_GROUND)
                     lvl_map[level][i_x][i_y] = T_WALL;
             } else if (lvl_map[level][i_x][i_y] & ~T_WALKABLE)
@@ -89,7 +92,8 @@ void make_room(int level, int top_wall, int bottom_wall, int left_wall, int righ
 
 
 /*
- * Creates a semi-randomly shaped corridor between two points. Will only replace unwalkable tiles.
+ * Creates a semi-randomly shaped corridor between two points. Will only replace
+ * unwalkable tiles.
  */
 void make_corridor(int level, int from_x, int from_y, int to_x, int to_y)
 {
@@ -135,19 +139,22 @@ void make_corridor(int level, int from_x, int from_y, int to_x, int to_y)
 
             if (cur_x != 0 && lvl_map[level][cur_x - 1][i_y] == T_GROUND)
                 lvl_map[level][cur_x - 1][i_y] = T_WALL;
-            if (cur_x < LEVEL_HEIGHT - 1 && lvl_map[level][cur_x + 1][i_y] == T_GROUND)
+            if (cur_x < LEVEL_HEIGHT - 1 &&
+                lvl_map[level][cur_x + 1][i_y] == T_GROUND)
                 lvl_map[level][cur_x + 1][i_y] = T_WALL;
         }
 
         cur_y = y_target;
 
-        for (int i_x = min(cur_x, x_target); i_x <= max(cur_x, x_target); i_x++) {
+        for (int i_x = min(cur_x, x_target);
+             i_x <= max(cur_x, x_target); i_x++) {
             if (lvl_map[level][i_x][cur_y] & ~T_WALKABLE)
                 lvl_map[level][i_x][cur_y] = T_CORRIDOR;
 
             if (cur_y > 0 && lvl_map[level][i_x][cur_y - 1] == T_GROUND)
                 lvl_map[level][i_x][cur_y - 1] = T_WALL;
-            if (cur_y < LEVEL_WIDTH - 1 && lvl_map[level][i_x][cur_y + 1] == T_GROUND)
+            if (cur_y < LEVEL_WIDTH - 1 &&
+                lvl_map[level][i_x][cur_y + 1] == T_GROUND)
                 lvl_map[level][i_x][cur_y + 1] = T_WALL;
         }
 
@@ -157,9 +164,13 @@ void make_corridor(int level, int from_x, int from_y, int to_x, int to_y)
 
 
 /*
- * Checks if there is a walkable path from (from_x, from_y) to (to_x, to_y)
+ * can walk: Checks if there is a walkable path from (from_x, from_y) to
+ * (to_x, to_y). If dir_x and dir_y are not NULL, they will be set to the
+ * coordinates of the first tile adjacent to (from_x, from_y) in the path
+ * from (from_x, from_y) to (to_x, to_y).
  */
-int can_walk(int level, int from_x, int from_y, int to_x, int to_y)
+int can_walk(int level, int from_x, int from_y, int to_x, int to_y, int *dir_x,
+             int *dir_y)
 {
     bool checked[LEVEL_HEIGHT][LEVEL_WIDTH];
     int stack_x[LEVEL_HEIGHT * LEVEL_WIDTH];
@@ -176,6 +187,13 @@ int can_walk(int level, int from_x, int from_y, int to_x, int to_y)
         int cur_y = stack_y[stack_pointer];
         stack_pointer--;
         checked[cur_x][cur_y] = true;
+
+        if (abs(cur_x - from_x) <= 1 && abs(cur_y - from_y) <= 1) {
+            /* This is one of the cells that neighbour (from_x, from_y). Set
+               (dir_x, dir_y) if applicable. */
+            if (dir_x != NULL) *dir_x = cur_x;
+            if (dir_y != NULL) *dir_y = cur_y;
+        }
 
         if (cur_x == to_x && cur_y == to_y)
             return true;
@@ -222,7 +240,8 @@ void create_level(int level)
         int room_x = rand_int(0, LEVEL_HEIGHT - room_size_x - 1);
         int room_y = rand_int(0, LEVEL_WIDTH - room_size_y - 1);
 
-        make_room(level, room_x, room_x + room_size_x, room_y, room_y + room_size_y);
+        make_room(level, room_x, room_x + room_size_x, room_y,
+                  room_y + room_size_y);
 
         rooms_x[i] = room_x + room_size_x / 2;
         rooms_y[i] = room_y + room_size_y / 2;
@@ -232,7 +251,8 @@ void create_level(int level)
     // Check room connections
     connected[0] = true;
     for (int i = 1; i < nb_rooms; i++) {
-        if (can_walk(level, rooms_x[0], rooms_y[0], rooms_x[i], rooms_y[i]))
+        if (can_walk(level, rooms_x[0], rooms_y[0], rooms_x[i], rooms_y[i],
+                     NULL, NULL))
             connected[i] = true;
     }
 
@@ -243,7 +263,8 @@ void create_level(int level)
             do {
                 target_room = rand_int(0, nb_rooms - 1);
             } while (!connected[target_room]);
-            make_corridor(level, rooms_x[i], rooms_y[i], rooms_x[target_room], rooms_y[target_room]);
+            make_corridor(level, rooms_x[i], rooms_y[i], rooms_x[target_room],
+                          rooms_y[target_room]);
             connected[i] = true;
         }
     }
@@ -312,6 +333,7 @@ void recompute_visibility()
 {
     for (int i_x = 0; i_x < LEVEL_HEIGHT; i_x++)
         for (int i_y = 0; i_y < LEVEL_WIDTH; i_y++)
-            if (i_x == 0 || i_x == LEVEL_HEIGHT - 1 || i_y == 0 || i_y == LEVEL_WIDTH - 1)
+            if (i_x == 0 || i_x == LEVEL_HEIGHT - 1 || i_y == 0 ||
+                i_y == LEVEL_WIDTH - 1)
                 set_visible(rodney.dlvl, rodney.posx, rodney.posy, i_x, i_y);
 }

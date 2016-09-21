@@ -436,6 +436,17 @@ int drop();
 
 int dump_inventory();
 
+int rodney_attacks(Monster *target);
+
+void move_monsters();
+
+bool check_dead(Monster *target, bool rodney_killed);
+
+bool has_mixin(const ObjectType *type, Mixin_type mixin);
+
+int can_walk(int level, int from_x, int from_y, int to_x, int to_y, int *dir_x,
+             int *dir_y);
+
 /* Globals */
 
 typedef enum

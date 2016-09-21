@@ -185,9 +185,6 @@ int choose_montype(int level)
                 break;
         }
 
-    pline("Choosing %s, difficulty %d", monster_types[i].name,
-          monster_types[i].difficulty);
-
     return i;
 }
 
@@ -239,4 +236,53 @@ Monster *find_mon_at(int x, int y, int level)
     }
 
     return NULL;
+}
+
+
+bool check_dead(Monster *target, bool rodney_killed)
+{
+    if (target->hp > 0)
+        return false;
+
+    if (rodney_killed) {
+        rodney.magic_class_exp[target->type->magic_class] +=
+                10 * target->type->difficulty;
+        pline("You kill the %s.", target->type->name);
+    }
+    delete_from_linked_list(m_list, target);
+    free(target);
+
+    return true;
+}
+
+void mon_attacks(Monster *mon)
+{
+    pline("The %s hits!", mon->type->name);
+}
+
+
+void move_monsters()
+{
+    LinkedListNode *cur_node;
+    Monster *mon;
+    int new_x, new_y;
+
+    for (cur_node = m_list->head; cur_node != NULL; cur_node = cur_node->next) {
+        mon = cur_node->element;
+        if (mon->level != rodney.dlvl)
+            continue;
+
+        if (mon->type->atk_types & ATK_NO_MOVE)
+            continue;
+
+        if (can_walk(rodney.dlvl, mon->posx, mon->posy, rodney.posx,
+                     rodney.posy, &new_x, &new_y)) {
+            if (new_x == rodney.posx && new_y == rodney.posy) {
+                mon_attacks(mon);
+            } else if (!find_mon_at(new_x, new_y, rodney.dlvl)) {
+                mon->posx = new_x;
+                mon->posy = new_y;
+            }
+        }
+    }
 }

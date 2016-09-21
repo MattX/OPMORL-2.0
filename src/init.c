@@ -70,6 +70,9 @@ void init_game()
     m_list = new_linked_list();
     turn = 0;
 
+    for (int i = 0; i < MAX_MIXIN; i++) {
+        rodney.permanent_effects[i] = MT_NONE;
+    }
     for (int i = 0; i < NB_MAGIC_CLASSES; i++) {
         rodney.magic_class_exp[i] = 0;
     }
@@ -84,6 +87,7 @@ void init_game()
     rodneys_basic_sword->uses_left = -1;
 
     rodney.inventory[0] = rodneys_basic_sword;
+    rodney.wielded = rodneys_basic_sword;
 
     line_displayed = 0;
     last_col = 0;

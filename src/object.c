@@ -382,3 +382,9 @@ LinkedList *find_objs_at(int x, int y, int level)
 
     return ret;
 }
+
+
+bool has_mixin(const ObjectType *type, Mixin_type mixin)
+{
+    return type->mixin1 == mixin || type->mixin2 == mixin;
+}

@@ -23,8 +23,7 @@ available:
  * Tools
  * Food
  
-Experience is calculated by magic class, not by type of weapon. It is usually beneficial to have a set that's as
-homogeneous as possible in terms of magic classes. Magic classes are also used for weakness/strength determination. 
+Experience is calculated by magic class, not by type of weapon. Magic classes are also used for weakness/strength determination. 
 There are 5 magic classes per game; their names are generated at the beginning of the game. One of these classes
 has no weakness and no resistance, two have one each and two have two weaknesses and two resistances.
 Object mixins are revealed only if the player has sufficient magic class experience.

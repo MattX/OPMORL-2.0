@@ -9,6 +9,7 @@ int process_move_input(char c)
 {
     int to_x = rodney.posx;
     int to_y = rodney.posy;
+    Monster *target;
 
     if (c == 'h' || c == 'y' || c == 'b')
         to_y--;
@@ -19,6 +20,16 @@ int process_move_input(char c)
         to_x++;
     else if (c == 'k' || c == 'y' || c == 'u')
         to_x--;
+
+    if ((target = find_mon_at(to_x, to_y, rodney.dlvl)) != NULL) {
+        if (target->flags & MF_INVISIBLE) {
+            pline("Wait! There's a %s here", target->type->name);
+            target->flags &= ~MF_INVISIBLE;
+            return 1;
+        } else {
+            return rodney_attacks(target);
+        }
+    }
 
     return move_rodney(to_x, to_y);
 }
@@ -37,6 +48,7 @@ void show_env_messages()
 void process_turn(char c)
 {
     int turn_elapsed = 0;
+    LinkedList *inv;
 
     switch (c) {
     case 'h':
@@ -56,13 +68,19 @@ void process_turn(char c)
         turn_elapsed = use_stairs(1);
         break;
     case ',':
-        pickup();
+        turn_elapsed = pickup();
         break;
     case 'd':
         drop();
         break;
     case 'i':
-        dump_inventory();
+        inv = array_to_linked_list((void **) rodney.inventory, INVENTORY_SIZE,
+                                   false);
+        select_object(inv);
+        delete_linked_list(inv);
+        break;
+    case '.':
+        turn_elapsed = true;
         break;
     case 'q':
         exit_game();
@@ -71,6 +89,10 @@ void process_turn(char c)
         break;
     }
 
-    recompute_visibility();
+    if (turn_elapsed) {
+        move_monsters();
+        recompute_visibility();
+        turn++;
+    }
 }
 

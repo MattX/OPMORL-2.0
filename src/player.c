@@ -74,3 +74,47 @@ int use_stairs(int up)
     // Should not reach here
     return 0;
 }
+
+void add_permanent_effect(Mixin_type mixin)
+{
+    for (int i = 0; i < MAX_MIXIN; i++) {
+        if (rodney.permanent_effects[i] == mixin)
+            return;
+        if (rodney.permanent_effects[i] == MT_NONE)
+            rodney.permanent_effects[i] = mixin;
+    }
+}
+
+bool has_permanent_effect(Mixin_type mixin)
+{
+    for (int i = 0; i < MAX_MIXIN; i++) {
+        if (rodney.permanent_effects[i] == mixin)
+            return true;
+    }
+
+    return false;
+}
+
+int rodney_attacks(Monster *target)
+{
+    if (ndn(2, 10) > 10 + target->type->ac - rodney.explevel) {
+        int damage = 1;
+        if (rodney.wielded != NULL) {
+            if (rodney.wielded->type->class->o_class_flag &
+                (OT_MELEE | OT_WAND)) {
+                damage += ndn(2, rodney.wielded->type->power) / 20;
+                damage += ndn((1 + rodney.explevel / 10),
+                              2 * rodney.wielded->enchant);
+                target->hp -= damage;
+            } else if (rodney.wielded->type->class->o_class_flag & OT_TOOL) {
+                target->hp -= 4;
+            }
+        } else {
+            target->hp -= 1;
+        }
+        check_dead(target, true);
+    } else
+        pline("You miss the %s", target->type->name);
+
+    return 1;
+}
