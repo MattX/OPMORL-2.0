@@ -261,9 +261,17 @@ bool check_dead(Monster *target, bool rodney_killed)
 void mon_attacks(Monster *mon)
 {
     pline("The %s hits!", mon->type->name);
+    rodney.hp -= 1;
 }
 
-
+/*
+ * move_monsters: Move each monster on the level and get them a chance to
+ * attack. Only monsters that are on the current level, that can move,
+ * and that are not frozen/etc. will do something.
+ * Monsters who see rodney will move towards him, but others will simply wander
+ * around.
+ * TODO: add the wandering around.
+ */
 void move_monsters()
 {
     LinkedListNode *cur_node;
@@ -276,6 +284,10 @@ void move_monsters()
             continue;
 
         if (mon->type->atk_types & ATK_NO_MOVE)
+            continue;
+
+        if (!is_visible(rodney.dlvl, mon->posx, mon->posy, rodney.posx,
+                        rodney.posy))
             continue;
 
         /* First try finding a path clear of monsters; if it fails, try to

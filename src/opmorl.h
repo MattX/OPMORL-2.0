@@ -110,7 +110,6 @@ typedef struct
 {
     ObjectClass *class;
 
-    char name[MAX_NAME];
     char base_name[MAX_NAME];
     int value;
     int power;
@@ -177,8 +176,6 @@ typedef struct
 typedef struct s_object
 {
     const ObjectType *type;
-
-    char name[MAX_NAME];
 
     int posx, posy, level; /* Coordinates : x, y, level (we want persistent levels) */
     int uses_left; /* For potions */
@@ -380,7 +377,7 @@ void pline(char *, ...);
 
 void clear_msg_line();
 
-int yes_no(char *, ...);
+bool yes_no(char *, ...);
 
 void display_everything();
 
@@ -434,8 +431,6 @@ int pickup();
 
 int drop();
 
-int dump_inventory();
-
 int rodney_attacks(Monster *target);
 
 void move_monsters();
@@ -449,6 +444,24 @@ int can_walk(int level, int from_x, int from_y, int to_x, int to_y);
 bool
 dijkstra(int level, int from_x, int from_y, int to_x, int to_y, int *next_x,
          int *next_y, bool can_have_monst);
+
+void inventory();
+
+int wield();
+
+int unwield();
+
+int wear();
+
+int take_off_armor();
+
+bool is_visible(int level, int from_x, int from_y, int to_x, int to_y);
+
+void regain_hp();
+
+bool has_inventory_effect(Mixin_type effect);
+
+char *object_name(Object *obj);
 
 /* Globals */
 

@@ -40,15 +40,16 @@ void show_env_messages()
     LinkedList *objs_on_tile = find_objs_at(rodney.posx, rodney.posy, rodney.dlvl);
 
     if (objs_on_tile->length == 1)
-        pline("You see here a %s", ((Object *) objs_on_tile->head->element)->type->name);
+        pline("You see here a %s",
+              object_name((Object *) objs_on_tile->head->element));
     else if (objs_on_tile->length > 1)
-        pline("You see here a %s and other objects", ((Object *) objs_on_tile->head->element)->type->name);
+        pline("You see here a %s and other objects",
+              object_name((Object *) objs_on_tile->head->element));
 }
 
 void process_turn(char c)
 {
     int turn_elapsed = 0;
-    LinkedList *inv;
 
     switch (c) {
     case 'h':
@@ -71,13 +72,22 @@ void process_turn(char c)
         turn_elapsed = pickup();
         break;
     case 'd':
-        drop();
+        turn_elapsed = drop();
         break;
     case 'i':
-        inv = array_to_linked_list((void **) rodney.inventory, INVENTORY_SIZE,
-                                   false);
-        select_object(inv);
-        delete_linked_list(inv);
+        inventory();
+        break;
+    case 'w':
+        turn_elapsed = wield();
+        break;
+    case 'x':
+        turn_elapsed = unwield();
+        break;
+    case 'W':
+        turn_elapsed = wear();
+        break;
+    case 'T':
+        turn_elapsed = take_off_armor();
         break;
     case '.':
         turn_elapsed = true;
@@ -91,6 +101,7 @@ void process_turn(char c)
 
     if (turn_elapsed) {
         move_monsters();
+        regain_hp();
         recompute_visibility();
         turn++;
     }

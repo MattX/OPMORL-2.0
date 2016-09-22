@@ -37,8 +37,10 @@ int change_dlvl(int to_dlvl, int place_on)
         rodney.posx = new_x;
         rodney.posy = new_y;
 
-        if (!visited[rodney.dlvl])
+        if (!visited[rodney.dlvl]) {
+            visited[rodney.dlvl] = true;
             make_monsters(rodney.dlvl, -1);
+        }
 
         return 1;
     }
@@ -97,7 +99,7 @@ bool has_permanent_effect(Mixin_type mixin)
 
 int rodney_attacks(Monster *target)
 {
-    if (ndn(2, 10) > 10 + target->type->ac - rodney.explevel) {
+    if (ndn(2, 10) > 4 - target->type->ac - rodney.explevel) {
         int damage = 1;
         if (rodney.wielded != NULL) {
             if (rodney.wielded->type->class->o_class_flag &
@@ -106,15 +108,46 @@ int rodney_attacks(Monster *target)
                 damage += ndn((1 + rodney.explevel / 10),
                               2 * rodney.wielded->enchant);
                 target->hp -= damage;
-            } else if (rodney.wielded->type->class->o_class_flag & OT_TOOL) {
+            } else {
+                pline("You hit the %s with your %s", target->type->name,
+                      object_name(rodney.wielded));
                 target->hp -= 4;
             }
         } else {
             target->hp -= 1;
         }
+        pline("You hit the %s", target->type->name);
         check_dead(target, true);
     } else
         pline("You miss the %s", target->type->name);
 
     return 1;
+}
+
+
+/*
+ * player_has_effect: Returns true if the effect applies to the player either
+ * because it's in the inventory of a permanent effect.
+ */
+bool player_has_effect(Mixin_type effect)
+{
+    return has_inventory_effect(effect) || has_permanent_effect(effect);
+}
+
+
+/*
+ * regain_hp: Regenerate Rodney's HP every few turns.
+ */
+void regain_hp()
+{
+    static int turns_since_regain = 0;
+
+    if ((turns_since_regain > 10 ||
+         (player_has_effect(MT_BG_REGEN) && turns_since_regain > 5)) &&
+        rodney.max_hp > rodney.hp) {
+        rodney.hp += rodney.explevel;
+        turns_since_regain = 0;
+    } else {
+        turns_since_regain++;
+    }
 }

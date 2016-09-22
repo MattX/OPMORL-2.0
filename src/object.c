@@ -16,10 +16,16 @@
 
 #define OBJCLASS(pn, flag, sym, prob) add_objclass(&objclass_pointer, pn, flag, sym, prob);
 
+#define NBUF 200
+#define BUF_SIZE 200
+
 Mixin mixins_list[MAX_MIXIN];
 int nb_mixins;
 ObjectClass objclasses_list[MAX_OBJCLASS];
 int nb_objclass;
+
+char buffers[NBUF][BUF_SIZE];
+int buffer_index = 0;
 
 void add_mixin(int *position, Mixin_type id, int compatible_classes, char *desc,
                int prob, bool util)
@@ -123,7 +129,7 @@ int pick_mixin(ObjectClassFlag class_flag, int util_only)
     for (int i = 0; i < nb_mixins; i++) {
         if (mixins_list[i].compatible_classes & class_flag &&
             (!util_only || mixins_list[i].util)) {
-            if (so_far == i_chosen_mixin)
+            if (so_far >= i_chosen_mixin)
                 return mixins_list[i].id;
             so_far += mixins_list[i].prob;
         }
@@ -145,8 +151,8 @@ add_objclass(int *objclass_pointer, char *possible_names, ObjectClassFlag flag,
     objclasses_list[*objclass_pointer].possible_names = possible_names;
     objclasses_list[*objclass_pointer].o_class_flag = flag;
     objclasses_list[*objclass_pointer].symbol = symbol;
-    objclasses_list[*objclass_pointer].prob =
-            (*objclass_pointer)++;
+    objclasses_list[*objclass_pointer].prob = prob;
+    (*objclass_pointer)++;
 }
 
 
@@ -161,7 +167,7 @@ void init_objclass()
     OBJCLASS("helm,cask,helmet,cap,hat,", OT_HELM, '[', 10);
     OBJCLASS("potion,flask,philter,serum,elixir,", OT_POTION, '!', 8);
     OBJCLASS("tool,instrument,device,drive,orb,", OT_TOOL, '(', 10);
-    OBJCLASS("morsel,meal,ration,", OT_FOOD, '%', 2);
+    OBJCLASS("morsel,meal,ration,", OT_FOOD, '%', 1);
     OBJCLASS("stack of gold pieces,", OT_MONEY, '$',
              0); // Different probability calculation
 
@@ -191,7 +197,8 @@ char *pick_name(ObjectClass *class)
     }
 
     if (nb_commas < 0) {
-        print_to_log("Panic: too few commas in possible name descriptor (%s)\n", class->possible_names);
+        print_to_log("Panic: too few commas in possible name descriptor (%s)\n",
+                     class->possible_names);
         return "";
     }
 
@@ -243,18 +250,33 @@ ObjectClassFlag random_object_class()
 }
 
 
-void update_object_name(ObjectType *obj)
+char *object_name(Object *obj)
 {
-    snprintf(obj->name, MAX_NAME, "%s%s%s%s%s%s%s",
-             obj->magic_class_known ? magic_class_adjectives[obj->magic_class]
-                                    : "",
-             obj->magic_class_known ? " " : "",
-             obj->base_name,
-             obj->mixin1 != MT_NONE ? " of " : "",
-             obj->mixin1 != MT_NONE ? find_mixin(obj->mixin1)->descr : "",
-             (obj->mixin2 != MT_NONE && obj->mixin2_known) ? " and " : "",
-             (obj->mixin2 != MT_NONE && obj->mixin2_known) ? find_mixin(
-                     obj->mixin1)->descr : "");
+    char *buf = buffers[buffer_index];
+    char *next;
+    buffer_index = (buffer_index + 1) % NBUF;
+
+    if (obj->type->class->o_class_flag == OT_MONEY) {
+        snprintf(buf, BUF_SIZE, "pile of %d gold pieces", obj->enchant);
+    } else {
+        if (obj->type->class->o_class_flag & (OT_WAND | OT_MELEE)) {
+            next = buf + snprintf(buf, BUF_SIZE, "+%d ", obj->enchant);
+        } else {
+            next = buf;
+        }
+        snprintf(next, BUF_SIZE - (next - buf), "%s %s%s%s%s%s",
+                 magic_class_adjectives[obj->type->magic_class],
+                 obj->type->base_name,
+                 obj->type->mixin1 == -1 ? "" : " of ",
+                 obj->type->mixin1 == -1 ? "" :
+                 find_mixin(obj->type->mixin1)->descr,
+                 obj->type->mixin2 == -1 || !obj->type->mixin2_known ?
+                 "" : " and ",
+                 obj->type->mixin2 == -1 || !obj->type->mixin2_known ?
+                 "" : find_mixin(obj->type->mixin2)->descr);
+    }
+
+    return buf;
 }
 
 
@@ -267,11 +289,11 @@ void make_object_classes()
     ObjectType *gold = &object_types[0];
     ObjectClass *gold_class = find_object_class(OT_MONEY);
     if (!gold_class) {
-        print_to_log("Panic: could not find object class for money (%d)\n", OT_MONEY);
+        print_to_log("Panic: could not find object class for money (%d)\n",
+                     OT_MONEY);
         return;
     }
     gold->class = gold_class;
-    strcpy(gold->name, "gold piece");
     gold->value = 1;
     gold->mixin1 = MT_NONE;
     gold->mixin2 = MT_NONE;
@@ -289,13 +311,13 @@ void make_object_classes()
         return;
     }
     melee_weapon->class = melee_class;
-    strncpy(melee_weapon->name, "sword of the beginner", MAX_NAME);
     melee_weapon->power = 5;
     melee_weapon->value = 5;
     melee_weapon->color = CLR_DEFAULT;
     melee_weapon->mixin1 = MT_NONE;
     melee_weapon->mixin2 = MT_NONE;
     melee_weapon->magic_class = rand_int(0, NB_MAGIC_CLASSES - 1);
+    strncpy_pad(melee_weapon->base_name, "swiss army knife", MAX_NAME);
 
     // Make the rest randomly
     for (int i = 2; i < NB_OBJECTS; i++) {
@@ -310,6 +332,8 @@ void make_object_classes()
 
         if (ot->class->o_class_flag & (OT_TOOL | OT_POTION))
             ot->mixin1 = pick_mixin(class_flag, true);
+        else if (ot->class->o_class_flag == OT_FOOD)
+            ot->mixin1 = pick_mixin(class_flag, false);
         else
             ot->mixin1 = rand_int(1, 10) < 3 ? MT_NONE : pick_mixin(class_flag,
                                                                     false);
@@ -326,7 +350,6 @@ void make_object_classes()
 
         strncpy_pad(ot->base_name, name_prefix, MAX_NAME);
         free(name_prefix);
-        update_object_name(ot);
     }
 }
 
@@ -354,7 +377,6 @@ void add_level_objects(int level)
             obj->uses_left = -1;
 
         obj->flags = 0;
-        obj->name[0] = '\0';
         if (!find_floor_tile(level, &obj->posx, &obj->posy, T_WALKABLE, true)) {
             print_to_log("Could not place object %d on level %d\n", i, level);
             return;
@@ -382,7 +404,6 @@ LinkedList *find_objs_at(int x, int y, int level)
 
     return ret;
 }
-
 
 bool has_mixin(const ObjectType *type, Mixin_type mixin)
 {

@@ -26,6 +26,9 @@ void display_everything()
     display_map();
 }
 
+/*
+ * display_map: Display a map of the current level.
+ */
 void display_map()
 {
     int i, j;
@@ -83,7 +86,9 @@ void display_map()
     if (obj_node)
         do {
             Object *obj = (Object *) obj_node->element;
-            if (obj->level != rodney.dlvl || visibility_map[rodney.dlvl][obj->posx][obj->posy] == TS_UNDISCOVERED)
+            if (obj->level != rodney.dlvl ||
+                visibility_map[rodney.dlvl][obj->posx][obj->posy] ==
+                TS_UNDISCOVERED)
                 continue;
 
             attron(COLOR_PAIR(obj->type->color));
@@ -95,7 +100,8 @@ void display_map()
     if (mon_node)
         do {
             Monster *mon = (Monster *) mon_node->element;
-            if (mon->level != rodney.dlvl || visibility_map[rodney.dlvl][mon->posx][mon->posy] != TS_SEEN)
+            if (mon->level != rodney.dlvl ||
+                visibility_map[rodney.dlvl][mon->posx][mon->posy] != TS_SEEN)
                 continue;
 
             attron(COLOR_PAIR(magic_class_colors[mon->type->magic_class]));
@@ -111,6 +117,9 @@ void display_map()
     move(rodney.posx + 1, rodney.posy);
 }
 
+/*
+ * display_stats: Display player stats at the bottom of the screen.
+ */
 void display_stats()
 {
     int best_class = 0;
@@ -120,16 +129,25 @@ void display_stats()
 
     mvprintw(getmaxy(stdscr) - 2, 0, "Rodney the %s",
              magic_class_names[best_class]);
-    mvprintw(getmaxy(stdscr) - 1, 0, "Dlvl:%d\t$:%d\tHP:%d(%d)\tT:%d", rodney.dlvl + 1, rodney.gold, rodney.hp,
+    mvprintw(getmaxy(stdscr) - 1, 0, "Dlvl:%d\t$:%d\tHP:%d(%d)\tT:%d",
+             rodney.dlvl + 1, rodney.gold, rodney.hp,
              rodney.max_hp, turn);
 }
 
+/*
+ * clear_msg_line: Clear the message line on top of the screen.
+ */
 void clear_msg_line()
 {
     move(0, 0);
     clrtoeol();
 }
 
+/*
+ * va_pline: Print a line at the top of the screen. Supports printf variable
+ * arguments, passed as a va_list. This is to allow calling from other
+ * functions.
+ */
 void va_pline(char *format, va_list args)
 {
     if (line_displayed) {
@@ -146,6 +164,10 @@ void va_pline(char *format, va_list args)
     clrtoeol();
 }
 
+/*
+ * pline: Print a line at the top of the screen. Supports printf variable
+ * arguments.
+ */
 void pline(char *format, ...)
 {
     va_list args;
@@ -154,7 +176,10 @@ void pline(char *format, ...)
     va_end(args);
 }
 
-int yes_no(char *format, ...)
+/*
+ * yes_no: Ask a yes-no question.
+ */
+bool yes_no(char *format, ...)
 {
     char append[] = " (y/n) ";
     char *new_format;
@@ -174,17 +199,19 @@ int yes_no(char *format, ...)
     while (1) {
         rep = getch();
         if (rep == 'y' || rep == 'Y')
-            return 1;
+            return true;
         if (rep == 'n' || rep == 'N')
-            return 0;
+            return false;
     }
+
+    line_displayed = 0; // To disable additional --more--
 }
 
 // TODO: object selection window for several objects
 
 /*
- * Selects the next node with non-null element. If skipped is not none, if will be incremented by the number
- * of skipped elements
+ * Selects the next node with non-null element. If skipped is not none, if will
+ * be incremented by the number of skipped elements
  */
 LinkedListNode *find_not_null(LinkedListNode *node, int *skipped)
 {
@@ -198,8 +225,9 @@ LinkedListNode *find_not_null(LinkedListNode *node, int *skipped)
 }
 
 /*
- * Displays an object selection window for one object. There may be NULL elements in the linked list, corresponding
- * to empty slots from the inventory / a container.
+ * Displays an object selection window for one object. There may be NULL
+ * elements in the linked list, corresponding to empty slots from the inventory
+ * or a container.
  */
 Object *select_object(LinkedList *objects)
 {
@@ -219,7 +247,7 @@ Object *select_object(LinkedList *objects)
                 break;
 
             mvprintw(i + 1, 0, "%c - a %s", slot_to_letter(non_null_i),
-                     ((Object *) cur->element)->type->name);
+                     object_name((Object *) cur->element));
             if (cur->element == rodney.wielded)
                 printw(" (wielded)");
             if (cur->element == rodney.helm ||
@@ -234,10 +262,10 @@ Object *select_object(LinkedList *objects)
         next_top = cur;
 
         if (next_top != NULL)
-            mvprintw(getcurx(stdscr) + 1, 0,
+            mvprintw(getcury(stdscr) + 1, 0,
                      "<space> for next page, - to cancel");
         else
-            mvprintw(getcurx(stdscr) + 1, 0, "- to cancel");
+            mvprintw(getcury(stdscr) + 1, 0, "- to cancel");
         clrtoeol();
 
         while (1) {
@@ -258,12 +286,16 @@ Object *select_object(LinkedList *objects)
                     pline("You don't have item %c", selection);
             } else
                 pline("Invalid command");
+            line_displayed = 0;
         }
     }
 
     return selected;
 }
 
+/*
+ * print_to_log: print a message to the log file.
+ */
 void print_to_log(char *format, ...)
 {
     va_list args;

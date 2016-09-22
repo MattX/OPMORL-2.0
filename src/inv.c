@@ -5,7 +5,8 @@
 #include "opmorl.h"
 
 /*
- * Converts a char into an inventory letter. Returns -1 if unknown.
+ * letter_to_slot: Converts a char into an inventory letter. Returns -1 if
+ * the letter is not a valid slot (ie not in a-zA-Z).
  */
 int letter_to_slot(char c)
 {
@@ -19,6 +20,10 @@ int letter_to_slot(char c)
         return -1;
 }
 
+/*
+ * slot_to_letter: Converts a slot number to a letter for display or selection
+ * purposes. The slot number has to be between 0 and 51.
+ */
 char slot_to_letter(int i)
 {
     if (i < 0 || i > 51)
@@ -30,7 +35,8 @@ char slot_to_letter(int i)
 }
 
 /*
- * Adds an object to inventory. Returns -1 if the inventory is full, or the allocated slot otherwise.
+ * add_to_inventory: Adds an object to inventory. Returns -1 if the inventory
+ * is full, or the allocated slot number otherwise.
  */
 int add_to_inventory(Object *obj)
 {
@@ -44,7 +50,10 @@ int add_to_inventory(Object *obj)
     return slot;
 }
 
-
+/*
+ * delete_from_inventory: Remove the given object from the inventory of the
+ * player, if it is present.
+ */
 void delete_from_inventory(Object *obj)
 {
     int slot;
@@ -56,7 +65,12 @@ void delete_from_inventory(Object *obj)
     }
 }
 
-
+/*
+ * pickup: Ask the player which of the items on the ground to pick up. If a
+ * valid selection is made, move that item from the ground to the inventory.
+ * If the object is gold, it is destroyed and its amount is added to the
+ * gold field in the player struct.
+ */
 int pickup()
 {
     LinkedList *cur_objects;
@@ -81,7 +95,7 @@ int pickup()
             delete_from_linked_list(o_list, ret);
             free(ret);
         } else if ((slot = add_to_inventory(ret)) != -1) {
-            pline("%c - %s", slot_to_letter(slot), ret->type->name);
+            pline("%c - a %s", slot_to_letter(slot), object_name(ret));
             delete_from_linked_list(o_list, ret);
             elapsed = 1;
         } else
@@ -92,9 +106,15 @@ int pickup()
     return elapsed;
 }
 
+/*
+ * drop: Ask the player for an item to drop. Will return 1 if an item was
+ * dropped or 0 if the player cancelled the action.
+ */
 int drop()
 {
-    LinkedList *inventory_list = array_to_linked_list((void **) rodney.inventory, INVENTORY_SIZE, false);
+    LinkedList *inventory_list = array_to_linked_list(
+            (void **) rodney.inventory,
+            INVENTORY_SIZE, false);
     Object *to_drop = select_object(inventory_list);
     int elapsed = 0;
 
@@ -119,19 +139,146 @@ int drop()
     return elapsed;
 }
 
-#if 0
 /*
- * Temporary function before inventory display is completed
+ * inventory: Display the player's inventory.
  */
-int dump_inventory()
+void inventory()
 {
-    print_to_log("Inventory dump\n");
-    for (int i = 0; i < INVENTORY_SIZE; i++) {
-        if (rodney.inventory[i] != NULL)
-            print_to_log("    %c - %s\n", slot_to_letter(i), rodney.inventory[i]->type->name);
-    }
-    pline("Inventory dumped");
-
-    return 0;
+    LinkedList *inv = array_to_linked_list((void **) rodney.inventory,
+                                           INVENTORY_SIZE, false);
+    select_object(inv);
+    delete_linked_list(inv);
 }
-#endif
+
+/*
+ * wield: Asks the player for an item to wield and weilds it if a proper choice
+ * is made. Fails if something is already being weilded.
+ */
+int wield()
+{
+    if (rodney.wielded != NULL) {
+        pline("You are already wielding a %s. Unwield it with X.",
+              object_name(rodney.wielded));
+        return 0;
+    }
+
+    pline("What do you want to wield?");
+    LinkedList *inv = array_to_linked_list((void **) rodney.inventory,
+                                           INVENTORY_SIZE, false);
+    Object *selected = select_object(inv);
+    delete_linked_list(inv);
+
+    if (selected != NULL) {
+        rodney.wielded = selected;
+        pline("You are now wielding a %s", object_name(rodney.wielded));
+        return 1;
+    } else {
+        pline("Never mind.\n");
+        return 0;
+    }
+}
+
+/*
+ * unwield: Un-wields the currently wielded item, if there is one.
+ */
+int unwield()
+{
+    if (rodney.wielded == NULL) {
+        pline("You are not wielding anything.");
+        return 0;
+    }
+
+    rodney.wielded = NULL;
+    pline("You are now empty-handed.");
+    return 1;
+}
+
+/*
+ * wear: Asks for an item to wear, wears it if the selection is valid.
+ */
+int wear()
+{
+    pline("What do you want to wear?");
+
+    LinkedList *inv = array_to_linked_list((void **) rodney.inventory,
+                                           INVENTORY_SIZE, false);
+    Object *selected = select_object(inv);
+    delete_linked_list(inv);
+
+    switch (selected->type->class->o_class_flag) {
+    case OT_BODY_ARMOR:
+        if (rodney.body_armor != NULL) {
+            pline("You are already wearing body armor. Take it off with T.");
+            return 0;
+        } else {
+            rodney.body_armor = selected;
+            pline("You are now wearing a %s", object_name(selected));
+            return 1;
+        }
+
+    case OT_HELM:
+        if (rodney.helm != NULL) {
+            pline("You are already wearing a helm. Take it off with T.");
+            return 0;
+        } else {
+            rodney.helm = selected;
+            pline("You are now wearing a %s", object_name(selected));
+            return 1;
+        }
+
+    default:
+        pline("You can't wear that.");
+        return 0;
+    }
+
+    return 0; // Should not reach;
+}
+
+/*
+ * take_off_armor: Asks confirmation and removes armor.
+ */
+int take_off_armor()
+{
+    int confirm;
+
+    if (rodney.helm == NULL && rodney.body_armor == NULL) {
+        pline("You are not wearing anything. Fortunately, there are no kids around.");
+        return 0;
+    }
+    if (rodney.helm != NULL) {
+        confirm = yes_no("Do you want to take off your %s?",
+                         object_name(rodney.helm));
+        if (confirm) {
+            pline("You were wearing a %s.", object_name(rodney.helm));
+            rodney.helm = NULL;
+            return 1;
+        }
+    }
+    if (rodney.body_armor != NULL) {
+        confirm = yes_no("Do you want to take off your %s?",
+                         object_name(rodney.body_armor));
+        if (confirm) {
+            pline("You were wearing a %s.", object_name(rodney.body_armor));
+            rodney.body_armor = NULL;
+            return 1;
+        }
+    }
+
+    return 0; // Should not reach here
+}
+
+/*
+ * has_inventory_effect: Returns whether an inventory object has the required
+ * effect.
+ */
+bool has_inventory_effect(Mixin_type effect)
+{
+    for (int i = 0; i < INVENTORY_SIZE; i++) {
+        if (rodney.inventory[i] == NULL)
+            continue;
+        if (has_mixin(rodney.inventory[i]->type, effect))
+            return true;
+    }
+
+    return false;
+}

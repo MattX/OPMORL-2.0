@@ -168,6 +168,7 @@ void make_corridor(int level, int from_x, int from_y, int to_x, int to_y)
  * (to_x, to_y). If dir_x and dir_y are not NULL, they will be set to the
  * coordinates of the first tile adjacent to (from_x, from_y) in the path
  * from (from_x, from_y) to (to_x, to_y).
+ * TODO: replace with dijkstra
  */
 int can_walk(int level, int from_x, int from_y, int to_x, int to_y)
 {
@@ -282,9 +283,12 @@ void create_level(int level)
 }
 
 /*
- * Bresenham-like raytracer
+ * is_visible: Checks wether tile (to_x, to_y) is visible from tile
+ * (from_x, from_y) on the given level. Walkable tiles are considered
+ * see-through, other are opaque. The first opaque tile on the way is
+ * considered visible.
  */
-void set_visible(int level, int from_x, int from_y, int to_x, int to_y)
+bool is_visible(int level, int from_x, int from_y, int to_x, int to_y)
 {
     int dx = abs(to_x - from_x);
     int sx = sign(to_x - from_x);
@@ -297,16 +301,14 @@ void set_visible(int level, int from_x, int from_y, int to_x, int to_y)
     bool blocked = false;
 
     while (1) {
-        if (blocked && visibility_map[rodney.dlvl][cur_x][cur_y] == TS_SEEN)
-            visibility_map[rodney.dlvl][cur_x][cur_y] = TS_UNSEEN;
-        if (!blocked)
-            visibility_map[rodney.dlvl][cur_x][cur_y] = TS_SEEN;
+        if (blocked)
+            return false;
+
+        if (cur_x == to_x && cur_y == to_y)
+            return true;
 
         if (lvl_map[level][cur_x][cur_y] & ~T_WALKABLE)
             blocked = true;
-
-        if (cur_x == to_x && cur_y == to_y)
-            break;
 
         old_error = error;
         if (old_error > -dx) {
@@ -323,10 +325,21 @@ void set_visible(int level, int from_x, int from_y, int to_x, int to_y)
 void recompute_visibility()
 {
     for (int i_x = 0; i_x < LEVEL_HEIGHT; i_x++)
-        for (int i_y = 0; i_y < LEVEL_WIDTH; i_y++)
-            if (i_x == 0 || i_x == LEVEL_HEIGHT - 1 || i_y == 0 ||
-                i_y == LEVEL_WIDTH - 1)
-                set_visible(rodney.dlvl, rodney.posx, rodney.posy, i_x, i_y);
+        for (int i_y = 0; i_y < LEVEL_WIDTH; i_y++) {
+            bool visible = is_visible(rodney.dlvl, rodney.posx, rodney.posy,
+                                      i_x, i_y);
+
+            if (!visible &&
+                visibility_map[rodney.dlvl][i_x][i_y] != TS_UNDISCOVERED)
+                visibility_map[rodney.dlvl][i_x][i_y] = TS_UNSEEN;
+
+            else if (visible)
+                visibility_map[rodney.dlvl][i_x][i_y] = TS_SEEN;
+
+            else
+                visibility_map[rodney.dlvl][i_x][i_y] = TS_UNDISCOVERED;
+        }
+
 }
 
 
