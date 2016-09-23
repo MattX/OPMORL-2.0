@@ -127,7 +127,7 @@ int rodney_attacks(Monster *target)
 
 /*
  * player_has_effect: Returns true if the effect applies to the player either
- * because it's in the inventory of a permanent effect.
+ * because it's in the inventory or because it's a permanent effect.
  */
 bool player_has_effect(Mixin_type effect)
 {
@@ -149,5 +149,21 @@ void regain_hp()
         turns_since_regain = 0;
     } else {
         turns_since_regain++;
+    }
+}
+
+
+/*
+ * take_damage: Takes damage and checks appropriate actions
+ */
+void take_damage(int damage)
+{
+    rodney.hp -= damage;
+
+    if (rodney.hp < 0) {
+        pline("You die...");
+#ifndef DEBUG
+        exit_game();
+#endif
     }
 }

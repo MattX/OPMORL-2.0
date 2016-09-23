@@ -80,7 +80,7 @@ int pickup()
 
     cur_objects = find_objs_at(rodney.posx, rodney.posy, rodney.dlvl);
     if (cur_objects->length == 0) {
-        pline("There is nothing here");
+        pline("There is nothing here.");
         return 0;
     } else if (cur_objects->length == 1)
         ret = cur_objects->head->element;
@@ -92,10 +92,11 @@ int pickup()
     if (ret != NULL) {
         if (ret->type->class->o_class_flag == OT_MONEY) {
             rodney.gold += ret->enchant;
+            pline("%d gold pieces.", ret->enchant);
             delete_from_linked_list(o_list, ret);
             free(ret);
         } else if ((slot = add_to_inventory(ret)) != -1) {
-            pline("%c - a %s", slot_to_letter(slot), object_name(ret));
+            pline("%c - a %s.", slot_to_letter(slot), object_name(ret));
             delete_from_linked_list(o_list, ret);
             elapsed = 1;
         } else
@@ -170,7 +171,7 @@ int wield()
 
     if (selected != NULL) {
         rodney.wielded = selected;
-        pline("You are now wielding a %s", object_name(rodney.wielded));
+        pline("You are now wielding a %s.", object_name(rodney.wielded));
         return 1;
     } else {
         pline("Never mind.\n");
@@ -193,6 +194,22 @@ int unwield()
     return 1;
 }
 
+
+/*
+ * ac_change: Returns the change in player AC when the object is put on/removed.
+ * The value returned will be positive (ie it is the AC increase when the
+ * object is removed).
+ */
+int ac_change(Object *obj)
+{
+    if (!(obj->type->class->o_class_flag & (OT_BODY_ARMOR | OT_HELM)))
+        return 0;
+
+    else
+        return 2 + obj->type->power / 3 + obj->enchant;
+}
+
+
 /*
  * wear: Asks for an item to wear, wears it if the selection is valid.
  */
@@ -212,7 +229,8 @@ int wear()
             return 0;
         } else {
             rodney.body_armor = selected;
-            pline("You are now wearing a %s", object_name(selected));
+            rodney.ac -= ac_change(rodney.body_armor);
+            pline("You are now wearing a %s.", object_name(selected));
             return 1;
         }
 
@@ -222,7 +240,8 @@ int wear()
             return 0;
         } else {
             rodney.helm = selected;
-            pline("You are now wearing a %s", object_name(selected));
+            rodney.ac -= ac_change(rodney.helm);
+            pline("You are now wearing a %s.", object_name(selected));
             return 1;
         }
 
@@ -250,6 +269,7 @@ int take_off_armor()
                          object_name(rodney.helm));
         if (confirm) {
             pline("You were wearing a %s.", object_name(rodney.helm));
+            rodney.ac += ac_change(rodney.helm);
             rodney.helm = NULL;
             return 1;
         }
@@ -259,6 +279,7 @@ int take_off_armor()
                          object_name(rodney.body_armor));
         if (confirm) {
             pline("You were wearing a %s.", object_name(rodney.body_armor));
+            rodney.ac += ac_change(rodney.helm);
             rodney.body_armor = NULL;
             return 1;
         }

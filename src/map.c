@@ -25,8 +25,8 @@ const int min_size_y = 3;
  * Finds a random tile on the specified map level. If can_have_mon is false, the
  * returned tile will not have a monster on it. The tile will be of one of types
  * specified in tile_types.
- * Returns the number of available tiles satisfying the constraints. Stores the coordinates of the
- * empty tile in x and y.
+ * Returns the number of available tiles satisfying the constraints. Stores the
+ * coordinates of the empty tile in x and y.
  */
 int
 find_floor_tile(int level, int *x, int *y, int tile_types, bool can_have_mon)
@@ -280,6 +280,8 @@ void create_level(int level)
     for (i_x = 0; i_x < LEVEL_HEIGHT; i_x++)
         for (i_y = 0; i_y < LEVEL_WIDTH; i_y++)
             visibility_map[level][i_x][i_y] = TS_UNDISCOVERED;
+
+    visited[level] = false;
 }
 
 /*

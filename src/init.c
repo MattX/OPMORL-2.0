@@ -92,18 +92,16 @@ void init_game()
     line_displayed = 0;
     last_col = 0;
 
-    for (int i_level = 0; i_level < LEVELS; i_level++)
+    for (int i_level = 0; i_level < LEVELS; i_level++) {
         create_level(i_level);
-
-    rodney.dlvl = 0;
-    if (!find_floor_tile(rodney.dlvl, &rodney.posx, &rodney.posy, T_STAIRS_UP, 0)) {
-        pline("Panic: Could not add Rodney!");
-        exit_game();
     }
 
-    recompute_visibility();
+    rodney.dlvl = 0;
+    change_dlvl(0, T_STAIRS_UP);
 
-    pline("Welcome to OPMORL !");
+    pline("Welcome to OPMORL!");
     pline("You are a novice mage on your final training.");
-    pline("Your goal is to find the elemental amulet at the bottom of this dungeon.");
+    pline("Your goal is to find the elemental amulet at the bottom of this"
+                  "dungeon, and come out alive.");
+    pline("Hint: the elemental amulet is not implemented yet.");
 }

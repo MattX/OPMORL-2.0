@@ -260,8 +260,12 @@ bool check_dead(Monster *target, bool rodney_killed)
 // TODO: implement :)
 void mon_attacks(Monster *mon)
 {
-    pline("The %s hits!", mon->type->name);
-    rodney.hp -= 1;
+    if (ndn(2, 10) > 10 - rodney.ac + mon->type->difficulty) {
+        rodney.hp -= ndn(3, mon->type->power / 3);
+        pline("The %s hits!", mon->type->name);
+    } else {
+        pline("The %s misses!", mon->type->name);
+    }
 }
 
 /*

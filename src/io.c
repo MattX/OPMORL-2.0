@@ -127,8 +127,8 @@ void display_stats()
         if (rodney.magic_class_exp[i] > rodney.magic_class_exp[best_class])
             best_class = i;
 
-    mvprintw(getmaxy(stdscr) - 2, 0, "Rodney the %s",
-             magic_class_names[best_class]);
+    mvprintw(getmaxy(stdscr) - 2, 0, "Rodney the %s\t\tAC: %d",
+             magic_class_names[best_class], rodney.ac);
     mvprintw(getmaxy(stdscr) - 1, 0, "Dlvl:%d\t$:%d\tHP:%d(%d)\tT:%d",
              rodney.dlvl + 1, rodney.gold, rodney.hp,
              rodney.max_hp, turn);

@@ -31,7 +31,7 @@
 #define DEFAULT_BACKCOLOR -1
 #define DEFAULT_FORECOLOR -1
 
-#define LEVELS 21
+#define LEVELS 16
 #define LEVEL_WIDTH 80
 #define LEVEL_HEIGHT 21
 
@@ -462,6 +462,8 @@ void regain_hp();
 bool has_inventory_effect(Mixin_type effect);
 
 char *object_name(Object *obj);
+
+int change_dlvl(int to_dlvl, int place_on);
 
 /* Globals */
 

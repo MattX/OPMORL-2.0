@@ -135,7 +135,7 @@ int pick_mixin(ObjectClassFlag class_flag, int util_only)
         }
     }
 
-    return -1; // Should not reach here
+    return mixins_list[nb_mixins - 1].id;
 }
 
 
