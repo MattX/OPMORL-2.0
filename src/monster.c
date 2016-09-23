@@ -80,7 +80,7 @@ void init_monster_types()
     MONSTER(MON_HOBGOBLIN, "hobgoblin", MC_NEUTRAL, 25, 3, ATK_MELEE, 4, 3, 'g',
             true, 80);
     MONSTER(MON_FLOATING_EYE, "floating eye", MC_TRANS, 15, 3, 0, 0, 5, 'e',
-            false, 20);
+            true, 20);
     MONSTER(MON_LICH, "lich", MC_NECRO, 40, 0, ATK_MELEE | ATK_RAY, 7, 7, 'L',
             false, 80);
     MONSTER(MON_ARCH_LICH, "fucking arch-lich", MC_NECRO, 60, -1,
@@ -106,7 +106,7 @@ void init_monster_types()
             false, 20);
     MONSTER(MON_ARCHANGEL, "archangel", MC_EXOR, 35, -1,
             ATK_MELEE | ATK_TP | ATK_TIMEOUT, 10, 13, 'A', true, 20);
-    MONSTER(MON_LESSER_MINION, "lesser minion", MC_TRANS, 20, 4, ATK_MELEE, 4,
+    MONSTER(MON_LESSER_MINION, "lesser minion", MC_NECRO, 20, 4, ATK_MELEE, 4,
             2, 'm', false, 80);
     MONSTER(MON_MINION, "minion", MC_NECRO, 30, 2, ATK_MELEE, 7, 5, 'M', false,
             80);
@@ -139,6 +139,39 @@ void init_monster_types()
     MONSTER(MON_BLUE_DRAGON, "blue dragon", MC_EXOR, 50, -2,
             ATK_MELEE | ATK_RAY | ATK_TIMEOUT, 15, 25, 'D', true,
             0);
+    MONSTER(MON_WIZARD_OF_YENDOR, "Wizard of Yendor", MC_ILLU, 100, -5,
+            ATK_MELEE | ATK_TP | ATK_BLOWBACK | ATK_RAY, 15, 21, '@', false, 0);
+    MONSTER(MON_SPIRIT, "spirit", MC_EXOR, 20, 4, ATK_MELEE | ATK_RAY, 4,
+            2, 'm', false, 80);
+    MONSTER(MON_HIGHER_SPIRIT, "higher spirit", MC_EXOR, 30, 2,
+            ATK_MELEE | ATK_RAY, 7, 5, 'S', false,
+            80);
+    MONSTER(MON_GHOST, "ghost", MC_EXOR, 50, 0,
+            ATK_MELEE | ATK_LIFEFORCE | ATK_TIMEOUT, 9, 11, 'S', true, 80);
+    MONSTER(MON_ELF, "elf", MC_ILLU, 20, 4, ATK_MELEE, 4,
+            2, 'e', false, 80);
+    MONSTER(MON_ELF_LORD, "elf lord", MC_ILLU, 30, 2, ATK_MELEE, 7, 5, 'E',
+            false,
+            80);
+    MONSTER(MON_ELF_KING, "elf king", MC_ILLU, 50, 0,
+            ATK_MELEE | ATK_TP, 9, 11, 'E', true, 80);
+    MONSTER(MON_DWARF, "dwarf", MC_EVOK, 20, 4, ATK_MELEE, 4,
+            2, 'd', false, 80);
+    MONSTER(MON_DWARF_LORD, "dwarf lord", MC_EVOK, 30, 2, ATK_MELEE, 7, 5, 'D',
+            false,
+            80);
+    MONSTER(MON_DWARF_KING, "dwarf king", MC_EVOK, 50, 0,
+            ATK_MELEE | ATK_TP, 9, 11, 'D', true, 80);
+    MONSTER(MON_ASMODEUS, "Asmodeus", MC_TRANS, 50, 0, ATK_MELEE | ATK_FIRE |
+                                                       ATK_POLYSELF, 9, 11, '&',
+            false, 20);
+    MONSTER(MON_JUIBLEX, "Juiblex", MC_EVOK, 60, -4,
+            ATK_MELEE | ATK_RAY | ATK_FIRE, 10, 17, '&', true, 20);
+    MONSTER(MON_DEMOGORGON, "Demogorgon", MC_EVOK, 60, -4,
+            ATK_MELEE | ATK_EVOKE, 10, 17, '&', true, 20);
+    MONSTER(MON_ANT, "ant", MC_NEUTRAL, 13, 4, ATK_MELEE, 3, 2, 'a', false, 80);
+    MONSTER(MON_FIRE_ANT, "fire ant", MC_NEUTRAL, 13, 4, ATK_MELEE | ATK_FIRE,
+            3, 3, 'a', true, 20);
 
 
     nb_monster_types = monster_pointer;
