@@ -484,7 +484,7 @@ LinkedList *o_list;
 LinkedList *m_list;
 
 /* Whether there is something displayed on the status line already */
-int line_displayed;
+bool line_needs_confirm;
 int last_col;
 FILE *log_file;
 

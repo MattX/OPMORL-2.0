@@ -109,17 +109,19 @@ int rodney_attacks(Monster *target)
                               2 * rodney.wielded->enchant);
                 target->hp -= damage;
             } else {
-                pline("You hit the %s with your %s", target->type->name,
-                      object_name(rodney.wielded));
-                target->hp -= 4;
+                target->hp -= 2;
             }
         } else {
             target->hp -= 1;
         }
-        pline("You hit the %s", target->type->name);
-        check_dead(target, true);
+
+        if (check_dead(target, true)) {
+            pline("You kill the %s.", target->type->name);
+        } else {
+            pline("You hit the %s.", target->type->name);
+        }
     } else
-        pline("You miss the %s", target->type->name);
+        pline("You miss the %s.", target->type->name);
 
     return 1;
 }
@@ -166,4 +168,11 @@ void take_damage(int damage)
         exit_game();
 #endif
     }
+}
+
+
+void gain_exp(int exp, MagicClassTag class)
+{
+    rodney.magic_class_exp[class] += exp;
+    if (rodney.magic_class_exp >= 0);
 }

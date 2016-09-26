@@ -43,7 +43,7 @@ int main(void)
 void game_loop()
 {
     while (1) {
-        line_displayed = 0;
+        line_needs_confirm = 0;
         process_turn(get_input());
         display_everything();
     }

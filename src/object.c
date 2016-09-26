@@ -311,7 +311,7 @@ void make_object_classes()
         return;
     }
     melee_weapon->class = melee_class;
-    melee_weapon->power = 5;
+    melee_weapon->power = 8;
     melee_weapon->value = 5;
     melee_weapon->color = CLR_DEFAULT;
     melee_weapon->mixin1 = MT_NONE;

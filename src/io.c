@@ -21,7 +21,7 @@ void display_everything()
 {
     display_stats(); /* The stuff like health points, level et alii */
     show_env_messages();
-    if (!line_displayed)
+    if (!line_needs_confirm)
         clear_msg_line();
     display_map();
 }
@@ -150,15 +150,30 @@ void clear_msg_line()
  */
 void va_pline(char *format, va_list args)
 {
-    if (line_displayed) {
-        mvprintw(0, last_col, " --more--");
-        getch();
+    int max_x, line_len;
+    char buf[BUFSIZ];
+
+    vsnprintf(buf, BUFSIZ - 1, format, args);
+    max_x = getmaxx(stdscr);
+    line_len = (int) strlen(buf);
+
+    if (line_needs_confirm) {
+        // Leave space for the --more-- prompt
+        if (last_col + line_len + 11 < max_x) {
+            mvprintw(0, last_col + 1, buf);
+        } else {
+            mvprintw(0, last_col + 1, " --more--");
+            getch();
+            line_needs_confirm = false;
+        }
     }
 
-    line_displayed = 1;
+    if (!line_needs_confirm) {
+        move(0, 0);
+        printw(buf);
+    }
 
-    move(0, 0);
-    vwprintw(stdscr, format, args);
+    line_needs_confirm = true;
     last_col = getcurx(stdscr);
 
     clrtoeol();
@@ -204,7 +219,7 @@ bool yes_no(char *format, ...)
             return false;
     }
 
-    line_displayed = 0; // To disable additional --more--
+    line_needs_confirm = 0; // To disable additional --more--
 }
 
 // TODO: object selection window for several objects
@@ -286,7 +301,7 @@ Object *select_object(LinkedList *objects)
                     pline("You don't have item %c", selection);
             } else
                 pline("Invalid command");
-            line_displayed = 0;
+            line_needs_confirm = 0;
         }
     }
 

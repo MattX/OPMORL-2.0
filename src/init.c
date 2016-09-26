@@ -18,13 +18,16 @@ void init_ncurses() {
 	noecho();
 
 	init_colors();
-    line_displayed = 0;
+    line_needs_confirm = 0;
 
     log_file = fopen(LOGFILE_PATH, "a");
     if (log_file == NULL)
         perror("Error opening log file: ");
 
     fprintf(log_file, "Started OPMORL %s at %d\n", STRING_V, (int) time(NULL));
+
+    line_needs_confirm = false;
+    last_col = 0;
 
     pline("Digging the dungeon, please wait...");
 }
@@ -89,9 +92,6 @@ void init_game()
     rodney.inventory[0] = rodneys_basic_sword;
     rodney.wielded = rodneys_basic_sword;
 
-    line_displayed = 0;
-    last_col = 0;
-
     for (int i_level = 0; i_level < LEVELS; i_level++) {
         create_level(i_level);
     }
@@ -101,7 +101,9 @@ void init_game()
 
     pline("Welcome to OPMORL!");
     pline("You are a novice mage on your final training.");
-    pline("Your goal is to find the elemental amulet at the bottom of this"
-                  "dungeon, and come out alive.");
+    pline("Your goal is to find the elemental amulet at the bottom of this");
+    pline("dungeon, and come out alive.");
     pline("Hint: the elemental amulet is not implemented yet.");
+
+    recompute_visibility();
 }

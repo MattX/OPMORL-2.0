@@ -51,8 +51,8 @@ void init_monster_types()
     int monster_pointer = 0;
 
     /* Name, Magic Class, HP, AC, Attacks, Power, Level, Symbol, Probability */
-    MONSTER(MON_RAT, "rat", MC_NEUTRAL, 6, 5, ATK_MELEE, 2, 1, 'r', false, 80);
-    MONSTER(MON_SEWER_RAT, "sewer rat", MC_NEUTRAL, 7, 5, ATK_MELEE, 3, 1, 'r',
+    MONSTER(MON_RAT, "rat", MC_NEUTRAL, 3, 5, ATK_MELEE, 2, 1, 'r', false, 80);
+    MONSTER(MON_SEWER_RAT, "sewer rat", MC_NEUTRAL, 4, 5, ATK_MELEE, 3, 1, 'r',
             true, 80);
     MONSTER(MON_CHAMELEON, "chameleon", MC_ILLU, 10, 6, ATK_MELEE | ATK_INVIS,
             0, 3, 'c', false, 20);
@@ -272,7 +272,8 @@ Monster *find_mon_at(int level, int x, int y)
 }
 
 /*
- * check_dead: Check if a monster is dead and take appropriate action.
+ * check_dead: Check if a monster is dead and take appropriate action. Returns
+ * whether the monster is dead.
  */
 bool check_dead(Monster *target, bool rodney_killed)
 {
@@ -282,7 +283,6 @@ bool check_dead(Monster *target, bool rodney_killed)
     if (rodney_killed) {
         rodney.magic_class_exp[target->type->magic_class] +=
                 10 * target->type->difficulty;
-        pline("You kill the %s.", target->type->name);
     }
     delete_from_linked_list(m_list, target);
     free(target);
