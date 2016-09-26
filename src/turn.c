@@ -92,6 +92,9 @@ void process_turn(char c)
     case '.':
         turn_elapsed = true;
         break;
+    case 'a':
+        turn_elapsed = use_object();
+        break;
     case 'q':
         exit_game();
         break;

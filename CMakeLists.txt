@@ -19,7 +19,7 @@ set(SOURCE_FILES
         src/linkedlist.c
         src/linkedlist.h
         src/turn.c
-        src/inv.c)
+        src/inv.c src/use.c)
 
 add_executable(opmorl ${SOURCE_FILES})
 target_link_libraries(opmorl ${CURSES_LIBRARIES})

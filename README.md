@@ -46,10 +46,12 @@ Contrary to items, they are predefined.
 
 1. Inventory management (mostly complete)
 3. Monster generation and movement (mostly complete)
-4. Combat implementation
-5. Object frequency tweaking, allow single or no mixin.
-6. More interesting RNG distributions
+4. Combat implementation (a little done)
+5. Object frequency tweaking, allow single or no mixin (mostly complete)
+6. More interesting RNG distributions (somewhat)
 7. Object use (including food)
+8. Dungeon branches
+9. Actual artifacts
 
 ## Mixins reference
 

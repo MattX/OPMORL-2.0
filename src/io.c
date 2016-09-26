@@ -26,6 +26,26 @@ void display_everything()
     display_map();
 }
 
+
+char select_wall_glyph(int x, int y, int level)
+{
+    bool vert_wall = false, horiz_wall = false;
+
+    if ((x != 0 && lvl_map[level][x - 1][y] == T_WALL) &&
+        (x != LEVEL_WIDTH && lvl_map[level][x + 1][y] == T_WALL))
+        vert_wall = true;
+    if ((y != 0 && lvl_map[level][x][y - 1] == T_WALL) &&
+        (y != LEVEL_HEIGHT && lvl_map[level][x][y + 1] == T_WALL))
+        horiz_wall = true;
+
+    if (vert_wall && !horiz_wall)
+        return '|';
+    if (horiz_wall && !vert_wall)
+        return '-';
+    return '+';
+}
+
+
 /*
  * display_map: Display a map of the current level.
  */
@@ -55,11 +75,11 @@ void display_map()
                 break;
             case T_CORRIDOR:
                 //attron(COLOR_PAIR(CLR_YELLOW));
-                mvaddch(i + 1, j, '.');
+                mvaddch(i + 1, j, '#');
                 //attroff(COLOR_PAIR(CLR_YELLOW));
                 break;
             case T_WALL:
-                mvaddch(i + 1, j, '#');
+                mvaddch(i + 1, j, select_wall_glyph(i, j, rodney.dlvl));
                 break;
             case T_FLOOR:
                 mvaddch(i + 1, j, '.');

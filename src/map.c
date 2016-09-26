@@ -137,11 +137,11 @@ void make_corridor(int level, int from_x, int from_y, int to_x, int to_y)
             if (lvl_map[level][cur_x][i_y] & ~T_WALKABLE)
                 lvl_map[level][cur_x][i_y] = T_CORRIDOR;
 
-            if (cur_x != 0 && lvl_map[level][cur_x - 1][i_y] == T_GROUND)
+            /*if (cur_x != 0 && lvl_map[level][cur_x - 1][i_y] == T_GROUND)
                 lvl_map[level][cur_x - 1][i_y] = T_WALL;
             if (cur_x < LEVEL_HEIGHT - 1 &&
                 lvl_map[level][cur_x + 1][i_y] == T_GROUND)
-                lvl_map[level][cur_x + 1][i_y] = T_WALL;
+                lvl_map[level][cur_x + 1][i_y] = T_WALL;*/
         }
 
         cur_y = y_target;
@@ -151,11 +151,11 @@ void make_corridor(int level, int from_x, int from_y, int to_x, int to_y)
             if (lvl_map[level][i_x][cur_y] & ~T_WALKABLE)
                 lvl_map[level][i_x][cur_y] = T_CORRIDOR;
 
-            if (cur_y > 0 && lvl_map[level][i_x][cur_y - 1] == T_GROUND)
+            /*if (cur_y > 0 && lvl_map[level][i_x][cur_y - 1] == T_GROUND)
                 lvl_map[level][i_x][cur_y - 1] = T_WALL;
             if (cur_y < LEVEL_WIDTH - 1 &&
                 lvl_map[level][i_x][cur_y + 1] == T_GROUND)
-                lvl_map[level][i_x][cur_y + 1] = T_WALL;
+                lvl_map[level][i_x][cur_y + 1] = T_WALL;*/
         }
 
         cur_x = x_target;

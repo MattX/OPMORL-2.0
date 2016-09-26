@@ -222,6 +222,11 @@ int wear()
     Object *selected = select_object(inv);
     delete_linked_list(inv);
 
+    if (selected == NULL) {
+        pline("Never mind.");
+        return 0;
+    }
+
     switch (selected->type->class->o_class_flag) {
     case OT_BODY_ARMOR:
         if (rodney.body_armor != NULL) {

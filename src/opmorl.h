@@ -465,6 +465,8 @@ char *object_name(Object *obj);
 
 int change_dlvl(int to_dlvl, int place_on);
 
+int use();
+
 /* Globals */
 
 typedef enum
