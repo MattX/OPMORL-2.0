@@ -84,14 +84,14 @@ void init_mixins()
     MIXIN_UTIL(MT_US_MAX_HP, OT_POTION, "great shape", 5);
     MIXIN_UTIL(MT_US_ENCHANT, OT_POTION, "enchantment", 5);
     MIXIN_UTIL(MT_US_ENLIGHTEN, OT_POTION, "enlightenment", 15);
-    MIXIN_UTIL(MT_US_LEVELPORT, OT_ALL & ~OT_FOOD, "level change", 2);
-    MIXIN_UTIL(MT_US_HP, OT_ALL & ~OT_FOOD, "healing", 15);
-    MIXIN_UTIL(MT_US_MAP, OT_ALL & ~OT_FOOD, "level mapping", 10);
-    MIXIN_UTIL(MT_US_OPEN, OT_ALL & ~OT_FOOD, "opening", 5);
-    MIXIN_UTIL(MT_US_TP, OT_ALL & ~OT_FOOD, "ubiquity", 5);
-    MIXIN_UTIL(MT_US_DIG, OT_ALL & ~OT_FOOD, "digging", 10);
-    MIXIN_UTIL(MT_US_CHMC, OT_ALL & ~OT_FOOD, "change", 4);
-    MIXIN_UTIL(MT_US_ID, OT_ALL & ~OT_FOOD, "identification", 15)
+    MIXIN_UTIL(MT_US_LEVELPORT, OT_POTION | OT_TOOL, "level change", 2);
+    MIXIN_UTIL(MT_US_HP, OT_POTION | OT_TOOL, "healing", 15);
+    MIXIN_UTIL(MT_US_MAP, OT_POTION | OT_TOOL, "level mapping", 10);
+    MIXIN_UTIL(MT_US_OPEN, OT_POTION | OT_TOOL, "opening", 5);
+    MIXIN_UTIL(MT_US_TP, OT_POTION | OT_TOOL, "ubiquity", 5);
+    MIXIN_UTIL(MT_US_DIG, OT_POTION | OT_TOOL, "digging", 10);
+    MIXIN_UTIL(MT_US_CHMC, OT_POTION | OT_TOOL, "change", 4);
+    MIXIN_UTIL(MT_US_ID, OT_POTION | OT_TOOL, "identification", 15);
 
     nb_mixins = mixin_pointer;
 

@@ -284,7 +284,7 @@ int take_off_armor()
                          object_name(rodney.body_armor));
         if (confirm) {
             pline("You were wearing a %s.", object_name(rodney.body_armor));
-            rodney.ac += ac_change(rodney.helm);
+            rodney.ac += ac_change(rodney.body_armor);
             rodney.body_armor = NULL;
             return 1;
         }

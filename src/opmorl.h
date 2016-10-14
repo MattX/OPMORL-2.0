@@ -26,7 +26,7 @@
 #define DEBUG
 
 #define VERSION 0.01
-#define STRING_V "2 prealpha"
+#define STRING_V "dev"
 #define DEFAULT 0
 #define DEFAULT_BACKCOLOR -1
 #define DEFAULT_FORECOLOR -1
@@ -431,7 +431,7 @@ int pickup();
 
 int drop();
 
-int rodney_attacks(Monster *target);
+int rodney_attacks(Monster *target, bool melee);
 
 void move_monsters();
 
@@ -455,7 +455,8 @@ int wear();
 
 int take_off_armor();
 
-bool is_visible(int level, int from_x, int from_y, int to_x, int to_y);
+bool is_visible(int level, int from_x, int from_y, int to_x, int to_y,
+                bool monsters_block, int *block_x, int *block_y);
 
 void regain_hp();
 
@@ -466,6 +467,10 @@ char *object_name(Object *obj);
 int change_dlvl(int to_dlvl, int place_on);
 
 int use();
+
+bool get_point(int *x, int *y, char *format, ...);
+
+Object *select_from_inv(int possible_types);
 
 /* Globals */
 

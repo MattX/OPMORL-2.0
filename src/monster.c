@@ -7,7 +7,7 @@
  *
  */
 
-/* Same remarks apply for monsters that the ones in object.c 
+/* Same remarks apply for monsters that the ones in object.c
  * No way. You dont need the player to hold monsters thus you only need 
  */
 
@@ -51,7 +51,7 @@ void init_monster_types()
     int monster_pointer = 0;
 
     /* Name, Magic Class, HP, AC, Attacks, Power, Level, Symbol, Probability */
-    MONSTER(MON_RAT, "rat", MC_NEUTRAL, 3, 5, ATK_MELEE, 2, 1, 'r', false, 80);
+    MONSTER(MON_RAT, "rat", MC_NEUTRAL, 3, 5, ATK_MELEE, 3, 1, 'r', false, 80);
     MONSTER(MON_SEWER_RAT, "sewer rat", MC_NEUTRAL, 4, 5, ATK_MELEE, 3, 1, 'r',
             true, 80);
     MONSTER(MON_CHAMELEON, "chameleon", MC_ILLU, 10, 6, ATK_MELEE | ATK_INVIS,
@@ -296,7 +296,7 @@ bool check_dead(Monster *target, bool rodney_killed)
 void mon_ranged_attack(Monster *mon)
 {
     if (ndn(2, 10) > 10 - rodney.ac + mon->type->difficulty) {
-        rodney.hp -= ndn(3, mon->type->power / 6);
+        rodney.hp -= ndn(3, mon->type->power / 3) - 2;
         pline("The %s hits!", mon->type->name);
     } else {
         pline("The %s misses!", mon->type->name);
@@ -333,7 +333,7 @@ void move_monsters()
             continue;
 
         if (!is_visible(rodney.dlvl, mon->posx, mon->posy, rodney.posx,
-                        rodney.posy))
+                        rodney.posy, NULL, NULL, NULL))
             continue;
 
         /* First try finding a path clear of monsters; if it fails, try to

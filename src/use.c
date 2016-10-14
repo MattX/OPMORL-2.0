@@ -13,28 +13,58 @@ int use_object(Object *object)
 
     if (object->type->class->o_class_flag == OT_POTION &&
         object->uses_left <= 0) {
-        pline("This %s is exhausted", object_name(object));
+        pline("This %s is exhausted.", object_name(object));
         return 0;
     }
 
     IF_HAS(object, MT_US_MAX_HP)
-        pline("You feel very healthy");
-        rodney.max_hp += rand_int(0, 6);
+        int augment = rand_int(0, 6);
+
+        pline("You feel very healthy!");
+        rodney.hp += rodney.hp / rodney.max_hp * (rodney.max_hp + augment);
+        rodney.max_hp += augment;
+    }
+    IF_HAS(object, MT_US_LEVELPORT)
+        int new_level = max(min(rand_int(rodney.dlvl - 2, rodney.dlvl + 2), 0),
+                            LEVELS - 1);
+        change_dlvl(new_level, T_WALKABLE);
     }
     IF_HAS(object, MT_US_DIG)
         pline("In which direction [hjklyubn>]?");
-
+        // TODO: implement
     }
     IF_HAS(object, MT_US_MAP)
-        pline("A map coalesces in your mind");
-        for (int i_x = 0; i_x < LEVEL_WIDTH; i_x++)
-            for (int i_y = 0; i_y < LEVEL_HEIGHT; i_y++)
+        pline("A map coalesces in your mind.");
+        for (int i_x = 0; i_x < LEVEL_HEIGHT; i_x++)
+            for (int i_y = 0; i_y < LEVEL_WIDTH; i_y++)
                 visibility_map[rodney.dlvl][i_x][i_y] = TS_UNSEEN;
         recompute_visibility();
     }
     IF_HAS(object, MT_US_HP)
-        pline("You regain your health");
+        pline("You regain your health.");
         rodney.hp = rodney.max_hp;
+    }
+    IF_HAS(object, MT_US_TP)
+        pline("The room around you suddenly changes!");
+        // Guaranteed to succeed since rodney is on a tile.
+        find_floor_tile(rodney.dlvl, &(rodney.posx), &(rodney.posy),
+                        T_WALKABLE, false);
+    }
+    IF_HAS(object, MT_US_ENCHANT)
+        pline("Choose an object to enchant.");
+        LinkedList *inv = array_to_linked_list((void **) rodney.inventory,
+                                               INVENTORY_SIZE, false);
+        Object *to_use = select_object(inv);
+        delete_linked_list(inv);
+
+        if (to_use != NULL) {
+            to_use->enchant += rand_int(0, 2);
+        } else {
+            pline("Never mind.");
+        }
+    }
+    IF_HAS(object, MT_US_ENLIGHTEN)
+        pline("You feel very knowledgeable.");
     }
 
     if (found_mixin) {

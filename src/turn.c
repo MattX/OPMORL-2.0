@@ -23,11 +23,11 @@ int process_move_input(char c)
 
     if ((target = find_mon_at(rodney.dlvl, to_x, to_y)) != NULL) {
         if (target->flags & MF_INVISIBLE) {
-            pline("Wait! There's a %s here", target->type->name);
+            pline("Wait! There's a %s there!", target->type->name);
             target->flags &= ~MF_INVISIBLE;
             return 1;
         } else {
-            return rodney_attacks(target);
+            return rodney_attacks(target, false);
         }
     }
 
@@ -40,10 +40,10 @@ void show_env_messages()
     LinkedList *objs_on_tile = find_objs_at(rodney.posx, rodney.posy, rodney.dlvl);
 
     if (objs_on_tile->length == 1)
-        pline("You see here a %s",
+        pline("You see here a %s.",
               object_name((Object *) objs_on_tile->head->element));
     else if (objs_on_tile->length > 1)
-        pline("You see here a %s and other objects",
+        pline("You see here a %s and other objects.",
               object_name((Object *) objs_on_tile->head->element));
 }
 
@@ -93,7 +93,10 @@ void process_turn(char c)
         turn_elapsed = true;
         break;
     case 'a':
-        turn_elapsed = use_object();
+        turn_elapsed = use();
+        break;
+    case 'z':
+        turn_elapsed = zap();
         break;
     case 'q':
         exit_game();

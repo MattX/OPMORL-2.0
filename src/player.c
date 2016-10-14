@@ -17,8 +17,8 @@ int move_rodney(int newx, int newy)
     if (lvl_map[rodney.dlvl][newx][newy] & ~T_WALKABLE)
         return 0;
 
-	rodney.posx = newx;
-	rodney.posy = newy;
+    rodney.posx = newx;
+    rodney.posy = newy;
     return 1;
 }
 
@@ -54,8 +54,10 @@ int use_stairs(int up)
             return 0;
         }
         if (rodney.dlvl == 0) {
-            int confirm = yes_no("Leave the dungeon? You have %d gold pieces and %d points.", rodney.gold,
-                                 rodney.score);
+            int confirm = yes_no(
+                    "Leave the dungeon? You have %d gold pieces and %d points.",
+                    rodney.gold,
+                    rodney.score);
             if (confirm)
                 exit_game();
             else
@@ -63,8 +65,7 @@ int use_stairs(int up)
         } else {
             return change_dlvl(rodney.dlvl - 1, T_STAIRS_DOWN);
         }
-    }
-    else {
+    } else {
         if (lvl_map[rodney.dlvl][rodney.posx][rodney.posy] != T_STAIRS_DOWN) {
             pline("You can't go down here!");
             return 0;
@@ -97,20 +98,32 @@ bool has_permanent_effect(Mixin_type mixin)
     return false;
 }
 
-int rodney_attacks(Monster *target)
+
+/*
+ * rodney_attacks: Update target to suffer the effects of a player attack. Set
+ * melee to true if the attack was done through a melee attack, false if the
+ * attack was ranged.
+ */
+int rodney_attacks(Monster *target, bool melee)
 {
     if (ndn(2, 10) > 4 - target->type->ac - rodney.explevel) {
         int damage = 1;
         if (rodney.wielded != NULL) {
-            if (rodney.wielded->type->class->o_class_flag &
-                (OT_MELEE | OT_WAND)) {
+            if (melee && rodney.wielded->type->class->o_class_flag & OT_MELEE) {
                 damage += ndn(2, rodney.wielded->type->power) / 20;
                 damage += ndn((1 + rodney.explevel / 10),
                               2 * rodney.wielded->enchant);
-                target->hp -= damage;
+            } else if (!melee &&
+                       rodney.wielded->type->class->o_class_flag & OT_WAND) {
+                damage += ndn(2, rodney.wielded->type->power) / 20;
             } else {
-                target->hp -= 2;
+                damage = 2;
             }
+            target->hp -= damage;
+#ifdef DEBUG
+            pline("Hit for %d damage, remaining %d/%d", damage, target->hp,
+                  target->type->max_hp);
+#endif
         } else {
             target->hp -= 1;
         }
@@ -175,4 +188,43 @@ void gain_exp(int exp, MagicClassTag class)
 {
     rodney.magic_class_exp[class] += exp;
     if (rodney.magic_class_exp >= 0);
+}
+
+
+int zap()
+{
+    int target_x, target_y;
+    int effective_x, effective_y;
+    bool confirm;
+
+    Object *weapon = select_from_inv(0);
+    Monster *target;
+
+    if (weapon == NULL) {
+        pline("Never mind.");
+        return 0;
+    }
+
+    confirm = get_point(&target_x, &target_y, "Zap where?");
+    if (!confirm) {
+        pline("Never mind.");
+        return 0;
+    }
+
+    if (!is_visible(rodney.dlvl, rodney.posx, rodney.posy, target_x, target_y,
+                    true, &effective_x, &effective_y)) {
+        target_x = effective_x;
+        target_y = effective_y;
+    }
+
+    target = find_mon_at(rodney.dlvl, target_x, target_y);
+
+    if (target == NULL) {
+        pline("The ray hits the wall.");
+        return 1;
+    }
+
+    rodney_attacks(target, false);
+
+    return 1;
 }

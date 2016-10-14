@@ -12,11 +12,16 @@
 // Maximum height of full screen windows like inventory selection
 #define WINDOW_HEIGHT 18
 
+
 char get_input()
 {
     return (char) getch();
 }
 
+
+/*
+ * display_everything: Prints map, environment messages, and stats.
+ */
 void display_everything()
 {
     display_stats(); /* The stuff like health points, level et alii */
@@ -27,21 +32,30 @@ void display_everything()
 }
 
 
-char select_wall_glyph(int x, int y, int level)
+/*
+ * select_wall_glyph: Return the appropriate glyph (-, | or +) to represent
+ * the wall at (level, x, y).
+ */
+char select_wall_glyph(int level, int x, int y)
 {
-    bool vert_wall = false, horiz_wall = false;
+    bool left_wall = false, right_wall = false, up_wall = false,
+            down_wall = false;
 
-    if ((x != 0 && lvl_map[level][x - 1][y] == T_WALL) &&
-        (x != LEVEL_WIDTH && lvl_map[level][x + 1][y] == T_WALL))
-        vert_wall = true;
-    if ((y != 0 && lvl_map[level][x][y - 1] == T_WALL) &&
-        (y != LEVEL_HEIGHT && lvl_map[level][x][y + 1] == T_WALL))
-        horiz_wall = true;
+    if ((x != 0 && lvl_map[level][x - 1][y] == T_WALL))
+        up_wall = true;
+    if ((x != LEVEL_HEIGHT - 1 && lvl_map[level][x + 1][y] == T_WALL))
+        down_wall = true;
 
-    if (vert_wall && !horiz_wall)
+    if ((y != 0 && lvl_map[level][x][y - 1] == T_WALL))
+        left_wall = true;
+    if ((y != LEVEL_WIDTH - 1 && lvl_map[level][x][y + 1] == T_WALL))
+        right_wall = true;
+
+    if (up_wall && down_wall && !left_wall && !right_wall)
         return '|';
-    if (horiz_wall && !vert_wall)
+    if (!up_wall && !down_wall && left_wall && right_wall)
         return '-';
+
     return '+';
 }
 
@@ -74,12 +88,10 @@ void display_map()
                 mvaddch(i + 1, j, '-');
                 break;
             case T_CORRIDOR:
-                //attron(COLOR_PAIR(CLR_YELLOW));
                 mvaddch(i + 1, j, '#');
-                //attroff(COLOR_PAIR(CLR_YELLOW));
                 break;
             case T_WALL:
-                mvaddch(i + 1, j, select_wall_glyph(i, j, rodney.dlvl));
+                mvaddch(i + 1, j, select_wall_glyph(rodney.dlvl, i, j));
                 break;
             case T_FLOOR:
                 mvaddch(i + 1, j, '.');
@@ -216,7 +228,7 @@ void pline(char *format, ...)
  */
 bool yes_no(char *format, ...)
 {
-    char append[] = " (y/n) ";
+    char append[] = " [yn] ";
     char *new_format;
     int rep = 0;
     size_t new_format_len = strlen(format) + strlen(append) + 1;
@@ -241,6 +253,70 @@ bool yes_no(char *format, ...)
 
     line_needs_confirm = 0; // To disable additional --more--
 }
+
+
+/*
+ * get_int: Asks to select a point on the map. This will return false if the
+ * user cancelled point selection, true otherwise.
+ */
+bool get_point(int *x, int *y, char *format, ...)
+{
+    pline("Move cursor with movement keys. Use {.,: } to confirm, ESC to cancel.");
+    line_needs_confirm = 0;
+
+    int cur_x = rodney.posx, cur_y = rodney.posy;
+
+    move(cur_x + 1, cur_y);
+    curs_set(2);
+
+    int status = 0; /* 0: selecting, 1: selected, 2: canceled */
+
+    while (!status) {
+        int c = getch();
+
+        switch (c) {
+        case '.':
+        case ',':
+        case ' ':
+        case ':':
+            status = 1;
+            break;
+        case 27: // Alt or esc
+            if (getch() == -1) {
+                status = 2;
+            }
+            break;
+        case 'h':
+        case 'j':
+        case 'k':
+        case 'l':
+        case 'y':
+        case 'u':
+        case 'b':
+        case 'n':
+            if ((c == 'h' || c == 'y' || c == 'b') && cur_y != 0)
+                cur_y--;
+            if ((c == 'u' || c == 'l' || c == 'n') && cur_y != LEVEL_WIDTH - 1)
+                cur_y++;
+
+            if ((c == 'j' || c == 'b' || c == 'n') && cur_x != LEVEL_HEIGHT - 1)
+                cur_x++;
+            if ((c == 'y' || c == 'u' || c == 'k') && cur_x != 0)
+                cur_x--;
+            move(cur_x + 1, cur_y);
+        default:
+            break;
+        }
+    }
+
+    curs_set(1);
+
+    *x = cur_x;
+    *y = cur_y;
+
+    return status == 1 ? true : false;
+}
+
 
 // TODO: object selection window for several objects
 
@@ -327,6 +403,23 @@ Object *select_object(LinkedList *objects)
 
     return selected;
 }
+
+
+/*
+ * select_from_inv: Ask the player an object from the player inventory. Returns
+ * NULL if the selection is cancelled.
+ * TODO: allow restricting selection to some types only.
+ */
+Object *select_from_inv(int possible_types)
+{
+    LinkedList *inv = array_to_linked_list((void **) rodney.inventory,
+                                           INVENTORY_SIZE, false);
+    Object *selected = select_object(inv);
+    delete_linked_list(inv);
+
+    return selected;
+}
+
 
 /*
  * print_to_log: print a message to the log file.

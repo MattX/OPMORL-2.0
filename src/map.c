@@ -285,12 +285,17 @@ void create_level(int level)
 }
 
 /*
- * is_visible: Checks wether tile (to_x, to_y) is visible from tile
+ * is_visible: Checks whether tile (to_x, to_y) is visible from tile
  * (from_x, from_y) on the given level. Walkable tiles are considered
  * see-through, other are opaque. The first opaque tile on the way is
  * considered visible.
+ * If monsters_block is set to true, monsters will count as unwalkable
+ * (opaque) tiles. This is useful for ranged weapons calculation. If block_x
+ * and block_y are not set to NULL, they will be updated with the coordinates
+ * of the blocking tile.
  */
-bool is_visible(int level, int from_x, int from_y, int to_x, int to_y)
+bool is_visible(int level, int from_x, int from_y, int to_x, int to_y,
+                bool monsters_block, int *block_x, int *block_y)
 {
     int dx = abs(to_x - from_x);
     int sx = sign(to_x - from_x);
@@ -309,8 +314,15 @@ bool is_visible(int level, int from_x, int from_y, int to_x, int to_y)
         if (cur_x == to_x && cur_y == to_y)
             return true;
 
-        if (lvl_map[level][cur_x][cur_y] & ~T_WALKABLE)
+        if (lvl_map[level][cur_x][cur_y] & ~T_WALKABLE ||
+            (monsters_block && find_mon_at(level, cur_x, cur_y))) {
             blocked = true;
+
+            if (block_x && block_y) {
+                *block_x = cur_x;
+                *block_y = cur_y;
+            }
+        }
 
         old_error = error;
         if (old_error > -dx) {
@@ -329,7 +341,7 @@ void recompute_visibility()
     for (int i_x = 0; i_x < LEVEL_HEIGHT; i_x++)
         for (int i_y = 0; i_y < LEVEL_WIDTH; i_y++) {
             bool visible = is_visible(rodney.dlvl, rodney.posx, rodney.posy,
-                                      i_x, i_y);
+                                      i_x, i_y, false, NULL, NULL);
 
             if (!visible &&
                 visibility_map[rodney.dlvl][i_x][i_y] != TS_UNDISCOVERED)
