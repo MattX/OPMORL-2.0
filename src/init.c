@@ -100,10 +100,7 @@ void init_game()
     change_dlvl(0, T_STAIRS_UP);
 
     pline("Welcome to OPMORL!");
-    pline("You are a novice mage on your final training.");
-    pline("Your goal is to find the elemental amulet at the bottom of this");
-    pline("dungeon, and come out alive.");
-    pline("Hint: the elemental amulet is not implemented yet.");
+    show_intro();
 
     recompute_visibility();
 }

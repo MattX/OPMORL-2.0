@@ -43,6 +43,7 @@
 #define MAX_DESCR 200
 
 #define LOGFILE_PATH "opmorl.log"
+#define INTRO_FILE "dat/intro.txt"
 
 /* Structs */
 
@@ -471,6 +472,10 @@ int use();
 bool get_point(int *x, int *y, char *format, ...);
 
 Object *select_from_inv(int possible_types);
+
+int zap();
+
+void show_intro();
 
 /* Globals */
 

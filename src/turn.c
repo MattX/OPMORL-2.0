@@ -98,6 +98,9 @@ void process_turn(char c)
     case 'z':
         turn_elapsed = zap();
         break;
+    case 'R':
+        redrawwin(stdscr);
+        break;
     case 'q':
         exit_game();
         break;

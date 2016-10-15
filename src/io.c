@@ -7,6 +7,7 @@
  *
  */
 
+#include <unistd.h>
 #include "opmorl.h"
 
 // Maximum height of full screen windows like inventory selection
@@ -430,4 +431,36 @@ void print_to_log(char *format, ...)
     va_start(args, format);
     vfprintf(log_file, format, args);
     va_end(args);
+}
+
+
+/**
+ * Shows the introduction text full-screen. Gets the file from INTRO_FILE.
+ */
+void show_intro()
+{
+    if (line_needs_confirm) {
+        getch();
+        line_needs_confirm = false;
+    }
+
+    erase();
+
+    FILE *intro_file = fopen(INTRO_FILE, "r");
+    if (intro_file == NULL) {
+        pline("Could not open intro file");
+        return;
+    }
+
+    char line_buf[BUFSIZ];
+
+    for (int i = 0; i < getmaxy(stdscr); i++) {
+        if (!fgets(line_buf, BUFSIZ, intro_file))
+            break;
+        mvprintw(i, 0, "%s", line_buf);
+    }
+
+    fclose(intro_file);
+
+    getch();
 }
