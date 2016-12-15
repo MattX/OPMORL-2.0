@@ -1,6 +1,11 @@
-//
-// Created by Matthieu Felix on 18/09/2016.
-//
+/*
+ *  turn.c
+ *  OPMORL 2
+ *
+ *  Created by Matthieu Felix on 18/09/2016.
+ *  Copyright 2016 OPMORL 2 dev team. All rights reserved.
+ *
+ */
 
 #include "opmorl.h"
 
@@ -96,9 +101,12 @@ void process_turn(char c)
     case 'z':
         turn_elapsed = zap();
         break;
+    case 'o':
+        turn_elapsed = open();
+        break;
     case 'G':
-        god_mode = true;
-        pline("God mode enabled.");
+        god_mode = !god_mode;
+        pline("God mode %s.", god_mode ? "enabled" : "disabled");
         break;
     case 'R':
         redrawwin(stdscr);

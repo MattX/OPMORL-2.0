@@ -1,6 +1,11 @@
-//
-// Created by Matthieu Felix on 17/09/2016.
-//
+/*
+ *  linkedlist.h
+ *  OPMORL 2
+ *
+ *  Created by Matthieu Felix on 17/09/2016.
+ *  Copyright 2016 OPMORL 2 dev team. All rights reserved.
+ *
+ */
 
 #ifndef OPMORL_2_0_LINKEDLIST_H
 #define OPMORL_2_0_LINKEDLIST_H

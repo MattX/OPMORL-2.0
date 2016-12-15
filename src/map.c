@@ -3,7 +3,7 @@
  *  OPMORL 2
  *
  *  Created by Théotime Grohens on 20/11/10.
- *  Copyright 2010 OPMORL 2 dev team. All rights reserved.
+ *  Copyright 2010-2016 OPMORL 2 dev team. All rights reserved.
  *
  */
 
@@ -289,16 +289,16 @@ void recompute_visibility()
 
 /**
  * Runs Dijkstra's algorithm between two points.
- * @param level The level on which to run the algorithm
- * @param from_x, from_y The source point x and y coordinates
- * @param to_x, to_y The destination point x and y coordinates
- * @param next_x, next_y Pointers in which the next position in the shortest
- * path will be stored if true is returned.
+ * @param dlvl The level on which to run the algorithm
+ * @param from The source point coordinates
+ * @param to The destination point coordinates
+ * @param next Pointer in which the next position in the shortest path will be
+ * stored if true is returned.
  * @param can_have_monst If set to false, only paths containing no monsters
  * will be considered
  * @return Whether there is a path between the source and destionation points.
  */
-bool dijkstra(int level, Coord to, Coord from, Coord *next,
+bool dijkstra(int dlvl, Coord from, Coord to, Coord *next,
               bool can_have_monst)
 {
     Coord tiles[2][LEVEL_HEIGHT * LEVEL_WIDTH];
@@ -330,9 +330,9 @@ bool dijkstra(int level, Coord to, Coord from, Coord *next,
                         continue;
 
                     if (!visited[i_x][i_y] &&
-                        IS_WALKABLE(maps[level][i_x][i_y]) &&
+                        IS_WALKABLE(maps[dlvl][i_x][i_y]) &&
                         (can_have_monst ||
-                         find_mon_at(level, (Coord) {i_x, i_y}) == NULL)) {
+                         find_mon_at(dlvl, (Coord) {i_x, i_y}) == NULL)) {
                         tiles[new_rotation][nb_tiles[new_rotation]].x = i_x;
                         tiles[new_rotation][nb_tiles[new_rotation]].y = i_y;
                         prev[i_x][i_y] = cur;

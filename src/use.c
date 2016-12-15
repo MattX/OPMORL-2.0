@@ -1,7 +1,11 @@
-//
-// Created by Matthieu Felix on 26/09/2016.
-//
-
+/*
+ *  use.c
+ *  OPMORL 2
+ *
+ *  Created by Matthieu Felix on 26/09/2016.
+ *  Copyright 2016 OPMORL 2 dev team. All rights reserved.
+ *
+ */
 #include "opmorl.h"
 
 #define IF_HAS(obj, mix) if (has_mixin((const ObjectType*)obj->type, mix)) \

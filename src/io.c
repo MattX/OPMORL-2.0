@@ -1,9 +1,9 @@
 /*
- *  pline.c
+ *  io.c (was pline.c)
  *  OPMORL 2
  *
  *  Created by Théotime Grohens on 13/11/10.
- *  Copyright 2010 OPMORL 2 dev team. All rights reserved.
+ *  Copyright 2010-2016 OPMORL 2 dev team. All rights reserved.
  *
  */
 
@@ -14,14 +14,19 @@
 #define WINDOW_HEIGHT 18
 
 
+/**
+ * Get one key of player input
+ * @return The pressed key
+ */
 char get_input()
 {
     return (char) getch();
+    line_needs_confirm = false;
 }
 
 
-/*
- * display_everything: Prints map, environment messages, and stats.
+/**
+ * Prints map, environment messages, and stats.
  */
 void display_everything()
 {
@@ -34,22 +39,22 @@ void display_everything()
 
 
 /**
- * select_wall_glyph: Return the appropriate glyph (-, | or +) to represent
+ * Return the appropriate glyph (-, | or +) to represent
  * the wall at (level, x, y).
  */
-char select_wall_glyph(int level, int x, int y)
+char select_wall_glyph(int level, Coord pos)
 {
     bool left_wall = false, right_wall = false, up_wall = false,
             down_wall = false;
 
-    if ((x != 0 && maps[level][x - 1][y] == T_WALL))
+    if ((pos.x != 0 && maps[level][pos.x - 1][pos.y] == T_WALL))
         up_wall = true;
-    if ((x != LEVEL_HEIGHT - 1 && maps[level][x + 1][y] == T_WALL))
+    if ((pos.x != LEVEL_HEIGHT - 1 && maps[level][pos.x + 1][pos.y] == T_WALL))
         down_wall = true;
 
-    if ((y != 0 && maps[level][x][y - 1] == T_WALL))
+    if ((pos.y != 0 && maps[level][pos.x][pos.y - 1] == T_WALL))
         left_wall = true;
-    if ((y != LEVEL_WIDTH - 1 && maps[level][x][y + 1] == T_WALL))
+    if ((pos.y != LEVEL_WIDTH - 1 && maps[level][pos.x][pos.y + 1] == T_WALL))
         right_wall = true;
 
     if (up_wall && down_wall && !left_wall && !right_wall)
@@ -61,8 +66,8 @@ char select_wall_glyph(int level, int x, int y)
 }
 
 
-/*
- * display_map: Display a map of the current level.
+/**
+ * Display a map of the current level.
  */
 void display_map()
 {
@@ -126,8 +131,8 @@ void display_map()
     move(rodney.pos.x + 1, rodney.pos.y);
 }
 
-/*
- * display_stats: Display player stats at the bottom of the screen.
+/**
+ * Display player stats at the bottom of the screen.
  */
 void display_stats()
 {
@@ -143,8 +148,8 @@ void display_stats()
              rodney.max_hp, turn);
 }
 
-/*
- * clear_msg_line: Clear the message line on top of the screen.
+/**
+ * Clear the message line on top of the screen.
  */
 void clear_msg_line()
 {
@@ -152,10 +157,9 @@ void clear_msg_line()
     clrtoeol();
 }
 
-/*
- * va_pline: Print a line at the top of the screen. Supports printf variable
- * arguments, passed as a va_list. This is to allow calling from other
- * functions.
+/**
+ * Print a line at the top of the screen. Supports printf variable arguments,
+ * passed as a va_list. This is to allow calling from other functions.
  */
 void va_pline(char *format, va_list args)
 {
@@ -188,9 +192,8 @@ void va_pline(char *format, va_list args)
     clrtoeol();
 }
 
-/*
- * pline: Print a line at the top of the screen. Supports printf variable
- * arguments.
+/**
+ * Print a line at the top of the screen. Supports printf variable arguments.
  */
 void pline(char *format, ...)
 {
@@ -200,8 +203,8 @@ void pline(char *format, ...)
     va_end(args);
 }
 
-/*
- * yes_no: Ask a yes-no question.
+/**
+ * Ask a yes-no question.
  */
 bool yes_no(char *format, ...)
 {
@@ -221,22 +224,21 @@ bool yes_no(char *format, ...)
     free(new_format);
 
     while (1) {
-        rep = getch();
+        rep = get_input();
         if (rep == 'y' || rep == 'Y')
             return true;
         if (rep == 'n' || rep == 'N')
             return false;
     }
-
-    line_needs_confirm = 0; // To disable additional --more--
 }
 
 
-/*
- * get_int: Asks to select a point on the map. This will return false if the
- * user cancelled point selection, true otherwise.
+/**
+ * Asks to select a point on the map. This will return false if the user
+ * cancelled point selection, true otherwise.
+ * @param selected A pointer to where the selected point will be stored.
  */
-bool get_point(Coord *selected, char *format, ...)
+bool get_point(Coord *selected)
 {
     pline("Move cursor with movement keys. Use {.,: } to confirm, ESC to cancel.");
     line_needs_confirm = 0;
@@ -271,15 +273,7 @@ bool get_point(Coord *selected, char *format, ...)
         case 'u':
         case 'b':
         case 'n':
-            if ((c == 'h' || c == 'y' || c == 'b') && cur.y != 0)
-                cur.y--;
-            if ((c == 'u' || c == 'l' || c == 'n') && cur.y != LEVEL_WIDTH - 1)
-                cur.y++;
-
-            if ((c == 'j' || c == 'b' || c == 'n') && cur.x != LEVEL_HEIGHT - 1)
-                cur.x++;
-            if ((c == 'y' || c == 'u' || c == 'k') && cur.x != 0)
-                cur.x--;
+            cur = coord_add(cur, letter_to_direction((char) c));
             move(cur.x + 1, cur.y);
         default:
             break;
@@ -296,7 +290,7 @@ bool get_point(Coord *selected, char *format, ...)
 
 // TODO: object selection window for several objects
 
-/*
+/**
  * Selects the next node with non-null element. If skipped is not none, if will
  * be incremented by the number of skipped elements
  */
@@ -356,7 +350,7 @@ Object *select_object(LinkedList *objects)
         clrtoeol();
 
         while (1) {
-            int selection = getch();
+            int selection = get_input();
             if (selection == '-')
                 return NULL;
             else if (selection == ' ' && next_top != NULL)
@@ -373,7 +367,6 @@ Object *select_object(LinkedList *objects)
                     pline("You don't have item %c", selection);
             } else
                 pline("Invalid command");
-            line_needs_confirm = 0;
         }
     }
 
@@ -415,8 +408,7 @@ void print_to_log(char *format, ...)
 void show_intro()
 {
     if (line_needs_confirm) {
-        getch();
-        line_needs_confirm = false;
+        get_input();
     }
 
     erase();
@@ -437,5 +429,16 @@ void show_intro()
 
     fclose(intro_file);
 
-    getch();
+    get_input();
+}
+
+/**
+ * Gets a direction from the player
+ * @return a coord representing the direction.
+ */
+Coord get_direction()
+{
+    char dir = get_input();
+
+    return letter_to_direction(dir);
 }

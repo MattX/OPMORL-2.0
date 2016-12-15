@@ -3,12 +3,18 @@
  *  OPMORL 2
  *
  *  Created by Théotime Grohens on 21/11/10.
- *  Copyright 2010-2016. All rights reserved.
+ *  Copyright 2010-2016 OPMORL 2 dev team. All rights reserved.
  *
  */
 
 #include "opmorl.h"
 
+/**
+ * Moves the player, checking that the target cell can be walked on and is
+ * inside the level (but no monster presence checks are performed.
+ * @param to Destination coordinates
+ * @return The number of turns the action took
+ */
 int move_rodney(Coord to)
 {
     if (to.x < 0 || to.y < 0 || to.x >= LEVEL_HEIGHT || to.y >= LEVEL_WIDTH)
@@ -21,13 +27,13 @@ int move_rodney(Coord to)
     return 1;
 }
 
+
 /**
  * Changes the player level.
  * @param to_dlvl The depth level the player should be switched to
  * @param tile_type The tile type on which the player should land. Should be
  * T_STAIRS_UP or T_STAIRS_DOWN.
- * @return Whether the level change was successful (i.e. the right tile type
- * was found and unblocked).
+ * @return The number of turns the action took
  */
 int change_dlvl_stairs(int to_dlvl, int tile_type)
 {
@@ -52,6 +58,12 @@ int change_dlvl_stairs(int to_dlvl, int tile_type)
     }
 }
 
+/**
+ * Performs necessary checks, then move the player up or down if he is on the
+ * correct staircase.
+ * @param up True if the player pressed the up (<) key, false otherwise.
+ * @return The number of turns the action took
+ */
 int use_stairs(bool up)
 {
     if (up) {
@@ -105,10 +117,12 @@ bool has_permanent_effect(MixinType mixin)
 }
 
 
-/*
- * rodney_attacks: Update target to suffer the effects of a player attack. Set
- * melee to true if the attack was done through a melee attack, false if the
- * attack was ranged.
+/**
+ * Update target to suffer the effects of a player attack.
+ * @param target The targeted monster
+ * @param melee true if the attack was done through a melee attack, false if
+ * the attack was ranged. If true, the target should be adjacent to the
+ * player.
  */
 int rodney_attacks(Monster *target, bool melee)
 {
@@ -146,8 +160,8 @@ int rodney_attacks(Monster *target, bool melee)
 }
 
 
-/*
- * player_has_effect: Returns true if the effect applies to the player either
+/**
+ * Returns true if the effect applies to the player either
  * because it's in the inventory or because it's a permanent effect.
  */
 bool player_has_effect(MixinType effect)
@@ -156,8 +170,8 @@ bool player_has_effect(MixinType effect)
 }
 
 
-/*
- * regain_hp: Regenerate Rodney's HP every few turns.
+/**
+ * Regenerate Rodney's HP if required.
  */
 void regain_hp()
 {
@@ -174,8 +188,8 @@ void regain_hp()
 }
 
 
-/*
- * take_damage: Takes damage and checks appropriate actions
+/**
+ * Takes damage and checks appropriate actions
  */
 void take_damage(int damage)
 {
@@ -197,6 +211,10 @@ void gain_exp(int exp, MagicClassTag class)
 }
 
 
+/**
+ * Zaps a wand
+ * @return The number of turns the action took
+ */
 int zap()
 {
     Coord target_pos;
@@ -211,7 +229,8 @@ int zap()
         return 0;
     }
 
-    confirm = get_point(&target_pos, "Zap where?");
+    pline("Zap where?");
+    confirm = get_point(&target_pos);
     if (!confirm) {
         pline("Never mind.");
         return 0;
@@ -230,6 +249,30 @@ int zap()
     }
 
     rodney_attacks(target, false);
+
+    return 1;
+}
+
+
+int open()
+{
+    Coord direction = get_direction();
+    Coord target = coord_add(rodney.pos, direction);
+
+    if (maps[rodney.dlvl][target.x][target.y] == T_OPEN_DOOR) {
+        pline("This door is already open!");
+        return 0;
+    } else if (maps[rodney.dlvl][target.x][target.y] != T_CLOSED_DOOR) {
+        pline("You see no door there.");
+        return 0;
+    }
+
+    if (ndn(2, 3) < 4) {
+        pline("The door resists.");
+    } else {
+        pline("The door opens.");
+        maps[rodney.dlvl][target.x][target.y] = T_OPEN_DOOR;
+    }
 
     return 1;
 }

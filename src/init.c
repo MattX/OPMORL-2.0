@@ -3,7 +3,7 @@
  *  OPMORL 2
  *
  *  Created by Théotime Grohens on 13/11/10.
- *  Copyright 2010 OPMORL 2 dev team. All rights reserved.
+ *  Copyright 2010-2016 OPMORL 2 dev team. All rights reserved.
  *
  */
 
@@ -50,6 +50,10 @@ void exit_ncurses() {
 
 
 void exit_game() {
+    bool confirm = yes_no("Are you sure :) ?");
+    if (!confirm)
+        return;
+
     pline("Goodbye.");
 	getch();
     exit_ncurses();

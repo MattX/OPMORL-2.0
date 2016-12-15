@@ -3,7 +3,7 @@
  *  OPMORL 2
  *
  *  Created by Théotime Grohens on 13/11/10.
- *  Copyright 2010 OPMORL 2 dev team. All rights reserved.
+ *  Copyright 2010-2016 OPMORL 2 dev team. All rights reserved.
  *
  */
 
@@ -318,9 +318,11 @@ typedef struct s_monster
     Coord pos;
     int dlvl;
     int hp;
-    int timeout; /* How much time before unfreezing/waking/etc. */
+    int timeout; /** How much time before unfreezing/waking/etc. */
     int cooldown;
-    int flags; /* Such as invisible, flying ... */
+    int flags; /** Such as invisible, flying ... */
+    Coord remembered_pos; /** Where the monster thinks the player is */
+    bool remembered;
 } Monster;
 
 MonType monster_types[MAX_NB_MONSTERS];
@@ -476,7 +478,7 @@ bool has_mixin(const ObjectType *type, MixinType mixin);
 
 bool can_walk(int, Coord, Coord);
 
-bool dijkstra(int level, Coord to, Coord from, Coord *next,
+bool dijkstra(int dlvl, Coord to, Coord from, Coord *next,
               bool can_have_monst);
 
 void inventory();
@@ -502,7 +504,7 @@ int change_dlvl_stairs(int, int);
 
 int use();
 
-bool get_point(Coord *selected, char *format, ...);
+bool get_point(Coord *selected);
 
 Object *select_from_inv(int possible_types);
 
@@ -513,6 +515,14 @@ void show_intro();
 bool load_grid();
 
 void make_layout_from_grid(int dlvl);
+
+Coord letter_to_direction(char);
+
+Coord get_direction();
+
+Coord coord_add(Coord, Coord);
+
+int open();
 
 /* Globals */
 

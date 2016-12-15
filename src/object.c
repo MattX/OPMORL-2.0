@@ -3,7 +3,7 @@
  *  OPMORL 2
  *
  *  Created by Théotime Grohens on 20/11/10.
- *  Copyright 2010 OPMORL 2 dev team. All rights reserved.
+ *  Copyright 2010-2016 OPMORL 2 dev team. All rights reserved.
  *
  */
 
@@ -264,16 +264,19 @@ char *object_name(Object *obj)
         } else {
             next = buf;
         }
+
+        Mixin *mixin1 = find_mixin(obj->type->mixin1);
+        Mixin *mixin2 = find_mixin(obj->type->mixin2);
+
         snprintf(next, BUF_SIZE - (next - buf), "%s %s%s%s%s%s",
                  magic_class_adjectives[obj->type->magic_class],
                  obj->type->base_name,
-                 obj->type->mixin1 == -1 ? "" : " of ",
-                 obj->type->mixin1 == -1 ? "" :
-                 find_mixin(obj->type->mixin1)->descr,
-                 obj->type->mixin2 == -1 || !obj->type->mixin2_known ?
+                 mixin1 == NULL ? "" : " of ",
+                 mixin1 == NULL ? "" : mixin1->descr,
+                 mixin2 == NULL || !obj->type->mixin2_known ?
                  "" : " and ",
-                 obj->type->mixin2 == -1 || !obj->type->mixin2_known ?
-                 "" : find_mixin(obj->type->mixin2)->descr);
+                 mixin2 == NULL || !obj->type->mixin2_known ?
+                 "" : mixin2->descr);
     }
 
     return buf;

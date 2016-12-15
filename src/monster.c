@@ -3,7 +3,7 @@
  *  OPMORL 2
  *
  *  Created by Théotime Grohens on 20/11/10.
- *  Copyright 2010 OPMORL 2 dev team. All rights reserved.
+ *  Copyright 2010-2016 OPMORL 2 dev team. All rights reserved.
  *
  */
 
@@ -238,6 +238,8 @@ void make_monsters(int dlvl, int nb)
         mon->hp = mon->type->max_hp;
         mon->timeout = 0;
         mon->cooldown = 0;
+        mon->remembered = false;
+        mon->remembered_pos = (Coord) {0, 0};
 
         mon->dlvl = dlvl;
         if (!find_tile(dlvl, &mon->pos, false, -1)) {
@@ -325,6 +327,7 @@ void move_monsters()
 {
     LinkedListNode *cur_node;
     Monster *mon;
+    Coord target;
     Coord new;
 
     for (cur_node = m_list->head; cur_node != NULL; cur_node = cur_node->next) {
@@ -335,13 +338,25 @@ void move_monsters()
         if (mon->type->atk_types & ATK_NO_MOVE)
             continue;
 
-        if (!is_visible(rodney.dlvl, mon->pos, rodney.pos, NULL, false))
-            continue;
+        if (!is_visible(rodney.dlvl, mon->pos, rodney.pos, NULL, false)) {
+            if (mon->remembered && mon->pos.x == mon->remembered_pos.x &&
+                mon->pos.y == mon->remembered_pos.y) {
+                mon->remembered = false;
+            }
+            if (!mon->remembered)
+                continue;
+
+            target = mon->remembered_pos;
+        } else {
+            mon->remembered = true;
+            mon->remembered_pos = rodney.pos;
+            target = rodney.pos;
+        }
 
         /* First try finding a path clear of monsters; if it fails, try to
          * find a path with monsters */
-        if (dijkstra(rodney.dlvl, mon->pos, rodney.pos, &new, false) ||
-            dijkstra(rodney.dlvl, mon->pos, rodney.pos, &new, true)) {
+        if (dijkstra(rodney.dlvl, mon->pos, target, &new, false) ||
+            dijkstra(rodney.dlvl, mon->pos, target, &new, true)) {
             if (new.x == rodney.pos.x && new.y == rodney.pos.y) {
                 mon_ranged_attack(mon);
             } else if (!find_mon_at(rodney.dlvl, new)) {
