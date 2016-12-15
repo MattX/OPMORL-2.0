@@ -221,27 +221,27 @@ int choose_montype(int level)
     return i;
 }
 
-/*
- * make_monsters: Adds the specified nb (or 2d6 if nb is non-positive) of
- * monsters to dlvl level.
+/**
+ * Adds the specified number (or 2d6 by default) of monsters to a level
+ * @param dlvl Level at which to add the monsters
+ * @param nb Number of monsters to add. If non-positive, will default to 2d6.
  */
-void make_monsters(int level, int nb)
+void make_monsters(int dlvl, int nb)
 {
     if (nb <= 0)
         nb = ndn(2, 6);
 
     for (int i = 0; i < nb; i++) {
         Monster *mon = malloc(sizeof(Monster));
-        mon->type = &monster_types[choose_montype(level)];
+        mon->type = &monster_types[choose_montype(dlvl)];
         mon->flags = 0;
         mon->hp = mon->type->max_hp;
         mon->timeout = 0;
         mon->cooldown = 0;
 
-        mon->level = level;
-        if (!find_floor_tile(level, &(mon->posx), &(mon->posy), T_WALKABLE,
-                             false)) {
-            print_to_log("Level %d full, cannot add monster", level);
+        mon->dlvl = dlvl;
+        if (!find_tile(dlvl, &mon->pos, false, -1)) {
+            print_to_log("Level %d full, cannot add monster", dlvl);
             free(mon);
             return;
         }
@@ -250,10 +250,13 @@ void make_monsters(int level, int nb)
     }
 }
 
-/*
- * find_mon_at: Returns the monster at (level, x, y) if there is one, or NULL.
+/**
+ * Returns the monster at the specified coordinates, or NULL if there is none
+ * @param dlvl Level on which to search
+ * @param pos Coordinates to search
+ * @return The monster or NULL.
  */
-Monster *find_mon_at(int level, int x, int y)
+Monster *find_mon_at(int dlvl, Coord pos)
 {
     LinkedListNode *mon_node = m_list->head;
 
@@ -262,7 +265,7 @@ Monster *find_mon_at(int level, int x, int y)
 
     while (mon_node != NULL) {
         Monster *mon = (Monster *) mon_node->element;
-        if (mon->posx == x && mon->posy == y && mon->level == level)
+        if (mon->pos.x == pos.x && mon->pos.y == pos.y && mon->dlvl == dlvl)
             return mon;
 
         mon_node = mon_node->next;
@@ -322,31 +325,27 @@ void move_monsters()
 {
     LinkedListNode *cur_node;
     Monster *mon;
-    int new_x, new_y;
+    Coord new;
 
     for (cur_node = m_list->head; cur_node != NULL; cur_node = cur_node->next) {
         mon = cur_node->element;
-        if (mon->level != rodney.dlvl)
+        if (mon->dlvl != rodney.dlvl)
             continue;
 
         if (mon->type->atk_types & ATK_NO_MOVE)
             continue;
 
-        if (!is_visible(rodney.dlvl, mon->posx, mon->posy, rodney.posx,
-                        rodney.posy, NULL, NULL, NULL))
+        if (!is_visible(rodney.dlvl, mon->pos, rodney.pos, NULL, false))
             continue;
 
         /* First try finding a path clear of monsters; if it fails, try to
          * find a path with monsters */
-        if (dijkstra(rodney.dlvl, mon->posx, mon->posy, rodney.posx,
-                     rodney.posy, &new_x, &new_y, false) ||
-            dijkstra(rodney.dlvl, mon->posx, mon->posy, rodney.posx,
-                     rodney.posy, &new_x, &new_y, true)) {
-            if (new_x == rodney.posx && new_y == rodney.posy) {
+        if (dijkstra(rodney.dlvl, mon->pos, rodney.pos, &new, false) ||
+            dijkstra(rodney.dlvl, mon->pos, rodney.pos, &new, true)) {
+            if (new.x == rodney.pos.x && new.y == rodney.pos.y) {
                 mon_ranged_attack(mon);
-            } else if (!find_mon_at(rodney.dlvl, new_x, new_y)) {
-                mon->posx = new_x;
-                mon->posy = new_y;
+            } else if (!find_mon_at(rodney.dlvl, new)) {
+                mon->pos = new;
             }
         }
     }

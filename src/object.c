@@ -27,7 +27,7 @@ int nb_objclass;
 char buffers[NBUF][BUF_SIZE];
 int buffer_index = 0;
 
-void add_mixin(int *position, Mixin_type id, int compatible_classes, char *desc,
+void add_mixin(int *position, MixinType id, int compatible_classes, char *desc,
                int prob, bool util)
 {
     if (*position > MAX_MIXIN) {
@@ -377,26 +377,26 @@ void add_level_objects(int level)
             obj->uses_left = -1;
 
         obj->flags = 0;
-        if (!find_floor_tile(level, &obj->posx, &obj->posy, T_WALKABLE, true)) {
-            print_to_log("Could not place object %d on level %d\n", i, level);
+        if (!find_tile(level, &obj->pos, true, -1)) {
+            print_to_log("Could not place object %d on dlvl %d\n", i, level);
             return;
         }
-        obj->level = level;
+        obj->dlvl = level;
         add_to_linked_list(o_list, (void *) obj);
     }
 }
 
-LinkedList *find_objs_at(int x, int y, int level)
+LinkedList *find_objs_at(int dlvl, Coord pos)
 {
     LinkedList *ret = new_linked_list();
     LinkedListNode *obj_node = o_list->head;
 
     if (!obj_node)
-        return NULL; /* Be careful with that one ! */
+        return ret;
 
     while (obj_node != NULL) {
         Object *obj = (Object *) obj_node->element;
-        if (obj->posx == x && obj->posy == y && obj->level == level)
+        if (obj->pos.x == pos.x && obj->pos.y == pos.y && obj->dlvl == dlvl)
             add_to_linked_list(ret, obj);
 
         obj_node = obj_node->next;
@@ -405,7 +405,7 @@ LinkedList *find_objs_at(int x, int y, int level)
     return ret;
 }
 
-bool has_mixin(const ObjectType *type, Mixin_type mixin)
+bool has_mixin(const ObjectType *type, MixinType mixin)
 {
     return type->mixin1 == mixin || type->mixin2 == mixin;
 }

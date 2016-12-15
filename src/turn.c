@@ -3,25 +3,23 @@
 //
 
 #include "opmorl.h"
-#include "linkedlist.h"
 
 int process_move_input(char c)
 {
-    int to_x = rodney.posx;
-    int to_y = rodney.posy;
+    Coord to = rodney.pos;
     Monster *target;
 
     if (c == 'h' || c == 'y' || c == 'b')
-        to_y--;
+        to.y--;
     else if (c == 'l' || c == 'u' || c == 'n')
-        to_y++;
+        to.y++;
 
     if (c == 'j' || c == 'b' || c == 'n')
-        to_x++;
+        to.x++;
     else if (c == 'k' || c == 'y' || c == 'u')
-        to_x--;
+        to.x--;
 
-    if ((target = find_mon_at(rodney.dlvl, to_x, to_y)) != NULL) {
+    if ((target = find_mon_at(rodney.dlvl, to)) != NULL) {
         if (target->flags & MF_INVISIBLE) {
             pline("Wait! There's a %s there!", target->type->name);
             target->flags &= ~MF_INVISIBLE;
@@ -31,13 +29,13 @@ int process_move_input(char c)
         }
     }
 
-    return move_rodney(to_x, to_y);
+    return move_rodney(to);
 }
 
 
 void show_env_messages()
 {
-    LinkedList *objs_on_tile = find_objs_at(rodney.posx, rodney.posy, rodney.dlvl);
+    LinkedList *objs_on_tile = find_objs_at(rodney.dlvl, rodney.pos);
 
     if (objs_on_tile->length == 1)
         pline("You see here a %s.",
@@ -97,6 +95,10 @@ void process_turn(char c)
         break;
     case 'z':
         turn_elapsed = zap();
+        break;
+    case 'G':
+        god_mode = true;
+        pline("God mode enabled.");
         break;
     case 'R':
         redrawwin(stdscr);

@@ -60,6 +60,8 @@ void init_game()
 {
     srand((unsigned int) time(NULL));
 
+    god_mode = false;
+
     init_monster_types();
     make_object_classes();
 
@@ -92,12 +94,14 @@ void init_game()
     rodney.inventory[0] = rodneys_basic_sword;
     rodney.wielded = rodneys_basic_sword;
 
-    for (int i_level = 0; i_level < LEVELS; i_level++) {
-        create_level(i_level);
+    load_grid();
+    for (int i_dlvl = 0; i_dlvl < DLVL_MAX; i_dlvl++) {
+        make_layout_from_grid(i_dlvl);
+        add_level_objects(i_dlvl);
     }
 
     rodney.dlvl = 0;
-    change_dlvl(0, T_STAIRS_UP);
+    change_dlvl_stairs(0, T_STAIRS_UP);
 
     pline("Welcome to OPMORL!");
     show_intro();

@@ -33,7 +33,7 @@ void display_everything()
 }
 
 
-/*
+/**
  * select_wall_glyph: Return the appropriate glyph (-, | or +) to represent
  * the wall at (level, x, y).
  */
@@ -42,14 +42,14 @@ char select_wall_glyph(int level, int x, int y)
     bool left_wall = false, right_wall = false, up_wall = false,
             down_wall = false;
 
-    if ((x != 0 && lvl_map[level][x - 1][y] == T_WALL))
+    if ((x != 0 && maps[level][x - 1][y] == T_WALL))
         up_wall = true;
-    if ((x != LEVEL_HEIGHT - 1 && lvl_map[level][x + 1][y] == T_WALL))
+    if ((x != LEVEL_HEIGHT - 1 && maps[level][x + 1][y] == T_WALL))
         down_wall = true;
 
-    if ((y != 0 && lvl_map[level][x][y - 1] == T_WALL))
+    if ((y != 0 && maps[level][x][y - 1] == T_WALL))
         left_wall = true;
-    if ((y != LEVEL_WIDTH - 1 && lvl_map[level][x][y + 1] == T_WALL))
+    if ((y != LEVEL_WIDTH - 1 && maps[level][x][y + 1] == T_WALL))
         right_wall = true;
 
     if (up_wall && down_wall && !left_wall && !right_wall)
@@ -81,32 +81,8 @@ void display_map()
             if (visibility_map[rodney.dlvl][i][j] == TS_SEEN)
                 attron(A_BOLD);
 
-            switch (lvl_map[rodney.dlvl][i][j]) {
-            case T_CLOSED_DOOR:
-                mvaddch(i + 1, j, '+');
-                break;
-            case T_OPEN_DOOR:
-                mvaddch(i + 1, j, '-');
-                break;
-            case T_CORRIDOR:
-                mvaddch(i + 1, j, '#');
-                break;
-            case T_WALL:
-                mvaddch(i + 1, j, select_wall_glyph(rodney.dlvl, i, j));
-                break;
-            case T_FLOOR:
-                mvaddch(i + 1, j, '.');
-                break;
-            case T_STAIRS_UP:
-                mvaddch(i + 1, j, '<');
-                break;
-            case T_STAIRS_DOWN:
-                mvaddch(i + 1, j, '>');
-                break;
-            case T_GROUND:
-                mvaddch(i + 1, j, ' ');
-                break;
-            }
+            // TODO: display colors
+            mvaddch(i + 1, j, tile_types[maps[rodney.dlvl][i][j]].sym);
 
             if (visibility_map[rodney.dlvl][i][j] == TS_SEEN)
                 attroff(A_BOLD);
@@ -119,13 +95,13 @@ void display_map()
     if (obj_node)
         do {
             Object *obj = (Object *) obj_node->element;
-            if (obj->level != rodney.dlvl ||
-                visibility_map[rodney.dlvl][obj->posx][obj->posy] ==
+            if (obj->dlvl != rodney.dlvl ||
+                visibility_map[rodney.dlvl][obj->pos.x][obj->pos.y] ==
                 TS_UNDISCOVERED)
                 continue;
 
             attron(COLOR_PAIR(obj->type->color));
-            mvaddch(obj->posx + 1, obj->posy, obj->type->class->symbol);
+            mvaddch(obj->pos.x + 1, obj->pos.y, obj->type->class->symbol);
             attroff(COLOR_PAIR(obj->type->color));
         } while ((obj_node = obj_node->next) != NULL);
 
@@ -133,21 +109,21 @@ void display_map()
     if (mon_node)
         do {
             Monster *mon = (Monster *) mon_node->element;
-            if (mon->level != rodney.dlvl ||
-                visibility_map[rodney.dlvl][mon->posx][mon->posy] != TS_SEEN)
+            if (mon->dlvl != rodney.dlvl ||
+                visibility_map[rodney.dlvl][mon->pos.x][mon->pos.y] != TS_SEEN)
                 continue;
 
             attron(COLOR_PAIR(magic_class_colors[mon->type->magic_class]));
-            mvaddch(mon->posx + 1, mon->posy, mon->type->symbol);
+            mvaddch(mon->pos.x + 1, mon->pos.y, mon->type->symbol);
             attroff(COLOR_PAIR(magic_class_colors[mon->type->magic_class]));
         } while ((mon_node = mon_node->next) != NULL);
 
     /* Rodney */
     attron(A_BOLD);
-    mvaddch(rodney.posx + 1, rodney.posy, '@');
+    mvaddch(rodney.pos.x + 1, rodney.pos.y, '@');
     attroff(A_BOLD);
 
-    move(rodney.posx + 1, rodney.posy);
+    move(rodney.pos.x + 1, rodney.pos.y);
 }
 
 /*
@@ -260,14 +236,14 @@ bool yes_no(char *format, ...)
  * get_int: Asks to select a point on the map. This will return false if the
  * user cancelled point selection, true otherwise.
  */
-bool get_point(int *x, int *y, char *format, ...)
+bool get_point(Coord *selected, char *format, ...)
 {
     pline("Move cursor with movement keys. Use {.,: } to confirm, ESC to cancel.");
     line_needs_confirm = 0;
 
-    int cur_x = rodney.posx, cur_y = rodney.posy;
+    Coord cur = rodney.pos;
 
-    move(cur_x + 1, cur_y);
+    move(cur.x + 1, cur.y);
     curs_set(2);
 
     int status = 0; /* 0: selecting, 1: selected, 2: canceled */
@@ -295,16 +271,16 @@ bool get_point(int *x, int *y, char *format, ...)
         case 'u':
         case 'b':
         case 'n':
-            if ((c == 'h' || c == 'y' || c == 'b') && cur_y != 0)
-                cur_y--;
-            if ((c == 'u' || c == 'l' || c == 'n') && cur_y != LEVEL_WIDTH - 1)
-                cur_y++;
+            if ((c == 'h' || c == 'y' || c == 'b') && cur.y != 0)
+                cur.y--;
+            if ((c == 'u' || c == 'l' || c == 'n') && cur.y != LEVEL_WIDTH - 1)
+                cur.y++;
 
-            if ((c == 'j' || c == 'b' || c == 'n') && cur_x != LEVEL_HEIGHT - 1)
-                cur_x++;
-            if ((c == 'y' || c == 'u' || c == 'k') && cur_x != 0)
-                cur_x--;
-            move(cur_x + 1, cur_y);
+            if ((c == 'j' || c == 'b' || c == 'n') && cur.x != LEVEL_HEIGHT - 1)
+                cur.x++;
+            if ((c == 'y' || c == 'u' || c == 'k') && cur.x != 0)
+                cur.x--;
+            move(cur.x + 1, cur.y);
         default:
             break;
         }
@@ -312,8 +288,7 @@ bool get_point(int *x, int *y, char *format, ...)
 
     curs_set(1);
 
-    *x = cur_x;
-    *y = cur_y;
+    *selected = cur;
 
     return status == 1 ? true : false;
 }

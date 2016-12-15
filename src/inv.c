@@ -78,7 +78,7 @@ int pickup()
     int slot;
     int elapsed = 0;
 
-    cur_objects = find_objs_at(rodney.posx, rodney.posy, rodney.dlvl);
+    cur_objects = find_objs_at(rodney.dlvl, rodney.pos);
     if (cur_objects->length == 0) {
         pline("There is nothing here.");
         return 0;
@@ -126,9 +126,8 @@ int drop()
     } else if (to_drop == rodney.helm || to_drop == rodney.body_armor) {
         pline("You can't drop something you're wearing!");
     } else {
-        to_drop->posx = rodney.posx;
-        to_drop->posy = rodney.posy;
-        to_drop->level = rodney.dlvl;
+        to_drop->pos = rodney.pos;
+        to_drop->dlvl = rodney.dlvl;
 
         add_to_linked_list(o_list, to_drop);
         delete_from_inventory(to_drop);
@@ -297,7 +296,7 @@ int take_off_armor()
  * has_inventory_effect: Returns whether an inventory object has the required
  * effect.
  */
-bool has_inventory_effect(Mixin_type effect)
+bool has_inventory_effect(MixinType effect)
 {
     for (int i = 0; i < INVENTORY_SIZE; i++) {
         if (rodney.inventory[i] == NULL)

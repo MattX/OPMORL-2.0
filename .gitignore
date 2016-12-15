@@ -2,8 +2,8 @@ build
 !*.c
 !*.h
 .DS_Store
-OPMORL 2.xcodeproj/
 .idea/
 bin/
 opmorl.log
 heap.c
+.cmake/

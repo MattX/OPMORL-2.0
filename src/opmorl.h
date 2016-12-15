@@ -17,8 +17,6 @@
 #include <math.h>
 #include <time.h>
 #include <stdbool.h>
-
-// #include <ncurses.h>
 #include <curses.h>
 
 #include "linkedlist.h"
@@ -31,9 +29,9 @@
 #define DEFAULT_BACKCOLOR -1
 #define DEFAULT_FORECOLOR -1
 
-#define LEVELS 16
+#define DLVL_MAX 16
 #define LEVEL_WIDTH 80
-#define LEVEL_HEIGHT 21
+#define LEVEL_HEIGHT 20
 
 #define INVENTORY_SIZE 52
 // Different object types
@@ -44,13 +42,14 @@
 
 #define LOGFILE_PATH "opmorl.log"
 #define INTRO_FILE "dat/intro.txt"
+#define GRID_FILE "dat/grid.txt"
 
 /* Structs */
 
 
 typedef enum e_color
 {
-    CLR_DEFAULT = 0, /* COLOR_PAIR(0) is the default back/fore ground colors */
+    CLR_DEFAULT, /* COLOR_PAIR(0) is the default back/fore ground colors */
     CLR_WHITE,
     CLR_YELLOW,
     CLR_BLUE,
@@ -63,6 +62,15 @@ typedef enum e_color
  * init_color, and then we just have, before printing a monster/object, to call
  * attron(COLOR_PAIR(obj->color)); and attroff().	*/
 
+
+/**
+ * Stores a coordinate
+ */
+typedef struct s_coord
+{
+    int x; /** x coordinate */
+    int y; /** y coordinate */
+} Coord;
 
 /****** OBJECTS & object mixins ******/
 
@@ -85,14 +93,14 @@ typedef enum
 // to allow filtering).
 typedef enum
 {
-    OT_MONEY = 0x01,
-    OT_MELEE = 0x02,
-    OT_POTION = 0x04,
-    OT_WAND = 0x08,
-    OT_TOOL = 0x10,
-    OT_BODY_ARMOR = 0x20,
-    OT_HELM = 0x40,
-    OT_FOOD = 0x80,
+    OT_MONEY = 1 << 1,
+    OT_MELEE = 1 << 2,
+    OT_POTION = 1 << 3,
+    OT_WAND = 1 << 4,
+    OT_TOOL = 1 << 5,
+    OT_BODY_ARMOR = 1 << 6,
+    OT_HELM = 1 << 7,
+    OT_FOOD = 1 << 8,
 } ObjectClassFlag; /* Object type */
 
 #define OT_ALL (~0)
@@ -160,13 +168,13 @@ typedef enum
     MT_US_CHMC,
     MT_US_ENLIGHTEN,
     MT_US_ID,
-    MT_NONE = -1,
-} Mixin_type; // To be able to quickly check a mixin
-
+    MT_NUM,
+    MT_NONE,
+} MixinType; // To be able to quickly check a mixin
 
 typedef struct
 {
-    Mixin_type id;
+    MixinType id;
     int compatible_classes;
     char *descr;
     int prob;
@@ -178,7 +186,8 @@ typedef struct s_object
 {
     const ObjectType *type;
 
-    int posx, posy, level; /* Coordinates : x, y, level (we want persistent levels) */
+    Coord pos;
+    int dlvl; /* Coordinates : dlvl (we want persistent levels) */
     int uses_left; /* For potions */
     int cooldown; /* Effect cooldown */
     int enchant; /* Enchant OR amount for money */
@@ -198,23 +207,23 @@ void add_level_objects(int level);
 // For attacks and other monster properties
 typedef enum
 {
-    ATK_MELEE = 0x01,
-    ATK_FREEZE = 0x02,
-    ATK_FIRE = 0x04,
-    ATK_DISENCHANT = 0x08,  // Exo attack
-    ATK_RAY = 0x10,
-    ATK_TP = 0x20,            // Illus attack
-    ATK_INVIS = 0x40,        // Illus attack
-    ATK_NO_MOVE = 0x80,    // Immobile monster
-    ATK_BLOWBACK = 0x100,
-    ATK_POLYSELF = 0x200,    // Transmuter attack
-    ATK_DESTROY = 0x400,    // Transmuter attack
-    ATK_CONJURE = 0x800,    // Evoker attack
-    ATK_EVOKE = 0x1000,        // Evoker attack
-    ATK_LIFEFORCE = 0x2000, // Necro attack
-    ATK_EXPDRAIN = 0x4000,    // Necro attack
-    ATK_TIMEOUT = 0x8000,    // Exo attack
-    ATK_DROP_SWAG = 0x10000,
+    ATK_MELEE = 1 << 1,
+    ATK_FREEZE = 1 << 2,
+    ATK_FIRE = 1 << 3,
+    ATK_DISENCHANT = 1 << 4,
+    ATK_RAY = 1 << 5,
+    ATK_TP = 1 << 6,
+    ATK_INVIS = 1 << 7,
+    ATK_NO_MOVE = 1 << 8,    // Immobile monster
+    ATK_BLOWBACK = 1 << 9,
+    ATK_POLYSELF = 1 << 10,
+    ATK_DESTROY = 1 << 11,
+    ATK_CONJURE = 1 << 12,
+    ATK_EVOKE = 1 << 13,
+    ATK_LIFEFORCE = 1 << 14,
+    ATK_EXPDRAIN = 1 << 15,
+    ATK_TIMEOUT = 1 << 16,
+    ATK_DROP_SWAG = 1 << 17,
 } MonAtkType;
 
 
@@ -276,6 +285,7 @@ typedef enum
     MON_ANT,
     MON_FIRE_ANT,
     MON_JELLY,
+    MON_NB,
 } MonTypeTag;
 
 typedef struct
@@ -305,7 +315,8 @@ typedef struct s_monster
 {
     MonType *type;
 
-    int posx, posy, level;
+    Coord pos;
+    int dlvl;
     int hp;
     int timeout; /* How much time before unfreezing/waking/etc. */
     int cooldown;
@@ -321,22 +332,47 @@ int nb_monster_types;
 
 typedef enum
 {
-    T_WALL = 0x1,
-    T_CORRIDOR = 0x2,
-    T_OPEN_DOOR = 0x4,
-    T_CLOSED_DOOR = 0x8,
-    T_FLOOR = 0x10,
-    T_STAIRS_UP = 0x20,
-    T_STAIRS_DOWN = 0x40,
-    T_GROUND = 0x80,
+    T_WALL,
+    T_CORRIDOR,
+    T_OPEN_DOOR,
+    T_CLOSED_DOOR,
+    T_FLOOR,
+    T_STAIRS_UP,
+    T_STAIRS_DOWN,
+    T_GROUND,
+    T_COLLAPSED,
+    T_TRAPDOOR_CLOSED,
+    T_TRAPDOOR_OPEN,
+    T_LEVER,
+    T_PIPE,
+    T_PIPE_EXHAUST,
+    T_GRASS,
+    T_FUNGUS,
+    T_TREE,
+    T_FOUNTAIN,
+    T_PORTCULLIS_UP,
+    T_PORTCULLIS_DOWN,
+    T_RUBBLE,
+    NB_TILE_TYPES
 } TileType;
 
-#define T_ANY (~0)
-#define T_WALKABLE (T_CORRIDOR | T_OPEN_DOOR | T_FLOOR | T_STAIRS_UP | T_STAIRS_DOWN)
+struct s_tile_type
+{
+    bool walkable;
+    char sym;
+    Color color;
+};
+
+#define IS_WALKABLE(x) (tile_types[x].walkable)
+
+extern struct s_tile_type tile_types[NB_TILE_TYPES];
+
+
+/***********/
 
 typedef struct
 {
-    int posx, posy; /* Position */
+    Coord pos; /* Position */
     int explevel; /* Experience stuff */
     int hp, max_hp;
     int dlvl; /* The depth in the dungeon or whatever you may call it */
@@ -346,7 +382,7 @@ typedef struct
     Object *wielded;
     Object *helm;
     Object *body_armor;
-    Mixin_type permanent_effects[MAX_MIXIN];
+    MixinType permanent_effects[MAX_MIXIN];
     int gold;
     int score;
     int ac;
@@ -366,9 +402,7 @@ void exit_game();
 
 void exit_ncurses();
 
-int find_floor_tile(int, int *, int *, int, bool);
-
-void create_level(int);
+int find_tile(int, Coord *coords, bool, int);
 
 void recompute_visibility();
 
@@ -390,11 +424,11 @@ Object *select_object(LinkedList *objects);
 
 void init_monster_types();
 
-void make_monsters(int levels, int nb);
+void make_monsters(int dlvl, int nb);
 
-Monster *find_mon_at(int, int, int);
+Monster *find_mon_at(int, Coord);
 
-LinkedList *find_objs_at(int, int, int);
+LinkedList *find_objs_at(int, Coord);
 
 int rand_int(int, int);
 
@@ -412,9 +446,9 @@ double abs_d(double);
 
 void strncpy_pad(char *dest, const char *src, size_t n);
 
-int move_rodney(int, int);
+int move_rodney(Coord to);
 
-int use_stairs(int);
+int use_stairs(bool);
 
 void show_env_messages();
 
@@ -438,13 +472,12 @@ void move_monsters();
 
 bool check_dead(Monster *target, bool rodney_killed);
 
-bool has_mixin(const ObjectType *type, Mixin_type mixin);
+bool has_mixin(const ObjectType *type, MixinType mixin);
 
-int can_walk(int level, int from_x, int from_y, int to_x, int to_y);
+bool can_walk(int, Coord, Coord);
 
-bool
-dijkstra(int level, int from_x, int from_y, int to_x, int to_y, int *next_x,
-         int *next_y, bool can_have_monst);
+bool dijkstra(int level, Coord to, Coord from, Coord *next,
+              bool can_have_monst);
 
 void inventory();
 
@@ -456,26 +489,30 @@ int wear();
 
 int take_off_armor();
 
-bool is_visible(int level, int from_x, int from_y, int to_x, int to_y,
-                bool monsters_block, int *block_x, int *block_y);
+bool
+is_visible(int dlvl, Coord from, Coord to, Coord *block, bool monsters_block);
 
 void regain_hp();
 
-bool has_inventory_effect(Mixin_type effect);
+bool has_inventory_effect(MixinType effect);
 
 char *object_name(Object *obj);
 
-int change_dlvl(int to_dlvl, int place_on);
+int change_dlvl_stairs(int, int);
 
 int use();
 
-bool get_point(int *x, int *y, char *format, ...);
+bool get_point(Coord *selected, char *format, ...);
 
 Object *select_from_inv(int possible_types);
 
 int zap();
 
 void show_intro();
+
+bool load_grid();
+
+void make_layout_from_grid(int dlvl);
 
 /* Globals */
 
@@ -486,9 +523,10 @@ typedef enum
     TS_SEEN
 } TileStatus;
 
-TileType lvl_map[LEVELS][LEVEL_HEIGHT][LEVEL_WIDTH];
-TileStatus visibility_map[LEVELS][LEVEL_HEIGHT][LEVEL_WIDTH];
-bool visited[LEVELS];
+
+TileType maps[DLVL_MAX][LEVEL_HEIGHT][LEVEL_WIDTH];
+TileStatus visibility_map[DLVL_MAX][LEVEL_HEIGHT][LEVEL_WIDTH];
+bool visited[DLVL_MAX];
 Player rodney;
 int turn;
 
@@ -499,5 +537,7 @@ LinkedList *m_list;
 bool line_needs_confirm;
 int last_col;
 FILE *log_file;
+
+bool god_mode;
 
 void print_to_log(char *format, ...);

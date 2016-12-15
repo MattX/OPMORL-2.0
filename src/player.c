@@ -3,39 +3,45 @@
  *  OPMORL 2
  *
  *  Created by Théotime Grohens on 21/11/10.
- *  Copyright 2010 __MyCompanyName__. All rights reserved.
+ *  Copyright 2010-2016. All rights reserved.
  *
  */
 
 #include "opmorl.h"
 
-int move_rodney(int newx, int newy)
+int move_rodney(Coord to)
 {
-    if (newx < 0 || newy < 0 || newx >= LEVEL_HEIGHT || newy >= LEVEL_WIDTH)
+    if (to.x < 0 || to.y < 0 || to.x >= LEVEL_HEIGHT || to.y >= LEVEL_WIDTH)
         return 0;
 
-    if (lvl_map[rodney.dlvl][newx][newy] & ~T_WALKABLE)
+    if (!IS_WALKABLE(maps[rodney.dlvl][to.x][to.y]))
         return 0;
 
-    rodney.posx = newx;
-    rodney.posy = newy;
+    rodney.pos = to;
     return 1;
 }
 
-int change_dlvl(int to_dlvl, int place_on)
+/**
+ * Changes the player level.
+ * @param to_dlvl The depth level the player should be switched to
+ * @param tile_type The tile type on which the player should land. Should be
+ * T_STAIRS_UP or T_STAIRS_DOWN.
+ * @return Whether the level change was successful (i.e. the right tile type
+ * was found and unblocked).
+ */
+int change_dlvl_stairs(int to_dlvl, int tile_type)
 {
-    int new_x, new_y;
+    Coord new;
 
-    if (!find_floor_tile(to_dlvl, &new_x, &new_y, place_on, 0)) {
-        if (find_mon_at(new_y, to_dlvl, new_x))
+    if (!find_tile(to_dlvl, &new, false, tile_type)) {
+        if (find_mon_at(to_dlvl, new))
             pline("The staircase is blocked by a monster.");
         else // There is no up staircase on the level below
             pline("The staircase is blocked by debris from its collapsed roof.");
         return 0;
     } else {
         rodney.dlvl = to_dlvl;
-        rodney.posx = new_x;
-        rodney.posy = new_y;
+        rodney.pos = new;
 
         if (!visited[rodney.dlvl]) {
             visited[rodney.dlvl] = true;
@@ -46,10 +52,10 @@ int change_dlvl(int to_dlvl, int place_on)
     }
 }
 
-int use_stairs(int up)
+int use_stairs(bool up)
 {
     if (up) {
-        if (lvl_map[rodney.dlvl][rodney.posx][rodney.posy] != T_STAIRS_UP) {
+        if (maps[rodney.dlvl][rodney.pos.x][rodney.pos.y] != T_STAIRS_UP) {
             pline("You can't go up here!");
             return 0;
         }
@@ -63,14 +69,14 @@ int use_stairs(int up)
             else
                 pline("Ok");
         } else {
-            return change_dlvl(rodney.dlvl - 1, T_STAIRS_DOWN);
+            return change_dlvl_stairs(rodney.dlvl - 1, T_STAIRS_DOWN);
         }
     } else {
-        if (lvl_map[rodney.dlvl][rodney.posx][rodney.posy] != T_STAIRS_DOWN) {
+        if (maps[rodney.dlvl][rodney.pos.x][rodney.pos.y] != T_STAIRS_DOWN) {
             pline("You can't go down here!");
             return 0;
         } else {
-            return change_dlvl(rodney.dlvl + 1, T_STAIRS_UP);
+            return change_dlvl_stairs(rodney.dlvl + 1, T_STAIRS_UP);
         }
     }
 
@@ -78,7 +84,7 @@ int use_stairs(int up)
     return 0;
 }
 
-void add_permanent_effect(Mixin_type mixin)
+void add_permanent_effect(MixinType mixin)
 {
     for (int i = 0; i < MAX_MIXIN; i++) {
         if (rodney.permanent_effects[i] == mixin)
@@ -88,7 +94,7 @@ void add_permanent_effect(Mixin_type mixin)
     }
 }
 
-bool has_permanent_effect(Mixin_type mixin)
+bool has_permanent_effect(MixinType mixin)
 {
     for (int i = 0; i < MAX_MIXIN; i++) {
         if (rodney.permanent_effects[i] == mixin)
@@ -144,7 +150,7 @@ int rodney_attacks(Monster *target, bool melee)
  * player_has_effect: Returns true if the effect applies to the player either
  * because it's in the inventory or because it's a permanent effect.
  */
-bool player_has_effect(Mixin_type effect)
+bool player_has_effect(MixinType effect)
 {
     return has_inventory_effect(effect) || has_permanent_effect(effect);
 }
@@ -193,8 +199,8 @@ void gain_exp(int exp, MagicClassTag class)
 
 int zap()
 {
-    int target_x, target_y;
-    int effective_x, effective_y;
+    Coord target_pos;
+    Coord effective_pos;
     bool confirm;
 
     Object *weapon = select_from_inv(0);
@@ -205,19 +211,18 @@ int zap()
         return 0;
     }
 
-    confirm = get_point(&target_x, &target_y, "Zap where?");
+    confirm = get_point(&target_pos, "Zap where?");
     if (!confirm) {
         pline("Never mind.");
         return 0;
     }
 
-    if (!is_visible(rodney.dlvl, rodney.posx, rodney.posy, target_x, target_y,
-                    true, &effective_x, &effective_y)) {
-        target_x = effective_x;
-        target_y = effective_y;
+    if (!is_visible(rodney.dlvl, rodney.pos, target_pos, &effective_pos,
+                    true)) {
+        target_pos = effective_pos;
     }
 
-    target = find_mon_at(rodney.dlvl, target_x, target_y);
+    target = find_mon_at(rodney.dlvl, target_pos);
 
     if (target == NULL) {
         pline("The ray hits the wall.");

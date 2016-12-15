@@ -4,7 +4,8 @@ project(OPMORL_2_0)
 find_package(Curses REQUIRED)
 include_directories(${CURSES_INCLUDE_DIR})
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c99 -g")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c99 -g -Wall")
+#set(CMAKE_C_COMPILER "/usr/local/bin/gcc-6")
 
 set(SOURCE_FILES
         src/init.c

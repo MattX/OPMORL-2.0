@@ -26,8 +26,9 @@ int use_object(Object *object)
     }
     IF_HAS(object, MT_US_LEVELPORT)
         int new_level = max(min(rand_int(rodney.dlvl - 2, rodney.dlvl + 2), 0),
-                            LEVELS - 1);
-        change_dlvl(new_level, T_WALKABLE);
+                            DLVL_MAX - 1);
+        // TODO: use a different function
+        change_dlvl_stairs(new_level, T_STAIRS_DOWN);
     }
     IF_HAS(object, MT_US_DIG)
         pline("In which direction [hjklyubn>]?");
@@ -47,8 +48,7 @@ int use_object(Object *object)
     IF_HAS(object, MT_US_TP)
         pline("The room around you suddenly changes!");
         // Guaranteed to succeed since rodney is on a tile.
-        find_floor_tile(rodney.dlvl, &(rodney.posx), &(rodney.posy),
-                        T_WALKABLE, false);
+        find_tile(rodney.dlvl, &rodney.pos, false, -1);
     }
     IF_HAS(object, MT_US_ENCHANT)
         pline("Choose an object to enchant.");
