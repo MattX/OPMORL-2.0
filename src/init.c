@@ -7,11 +7,15 @@
  *
  */
 
-/* Various initialization functions */
+/** Various initialization and exiting functions */
 
 #include "opmorl.h"
 
-void init_ncurses() {
+/**
+ * Initializes ncurses and logging
+ */
+void system_init()
+{
 	initscr();
     cbreak();
 	keypad(stdscr, TRUE);
@@ -32,10 +36,13 @@ void init_ncurses() {
     pline("Digging the dungeon, please wait...");
 }
 
+/**
+ * Initializes ncurses colors
+ */
 void init_colors() {
-	start_color();
-	use_default_colors();
-	init_pair(CLR_WHITE, COLOR_WHITE, DEFAULT_BACKCOLOR); /* broken by the enum, wtf */
+    start_color();
+    use_default_colors();
+    init_pair(CLR_WHITE, COLOR_WHITE, DEFAULT_BACKCOLOR); /* broken by the enum, wtf */
     init_pair(CLR_YELLOW, COLOR_YELLOW, DEFAULT_BACKCOLOR);
     init_pair(CLR_MAGENTA, COLOR_MAGENTA, DEFAULT_BACKCOLOR);
     init_pair(CLR_BLUE, COLOR_BLUE, DEFAULT_BACKCOLOR);
@@ -44,22 +51,31 @@ void init_colors() {
     init_pair(CLR_GREEN, COLOR_GREEN, DEFAULT_BACKCOLOR);
 }
 
+/**
+ * Destructs ncurses handlers
+ */
 void exit_ncurses() {
-	endwin();
+    endwin();
 }
 
 
+/**
+ * Exits the game
+ */
 void exit_game() {
     bool confirm = yes_no("Are you sure :) ?");
     if (!confirm)
         return;
 
     pline("Goodbye.");
-	getch();
+    getch();
     exit_ncurses();
     exit(0);
 }
 
+/**
+ * Initializes gameplay
+ */
 void init_game()
 {
     srand((unsigned int) time(NULL));
@@ -97,6 +113,9 @@ void init_game()
 
     rodney.inventory[0] = rodneys_basic_sword;
     rodney.wielded = rodneys_basic_sword;
+
+    layout_dungeon();
+    log_layout();
 
     load_grid();
     for (int i_dlvl = 0; i_dlvl < DLVL_MAX; i_dlvl++) {

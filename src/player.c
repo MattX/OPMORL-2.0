@@ -11,12 +11,24 @@
 
 /**
  * Moves the player, checking that the target cell can be walked on and is
- * inside the level (but no monster presence checks are performed.
+ * inside the level, and that no monster stands in the way
  * @param to Destination coordinates
  * @return The number of turns the action took
  */
 int move_rodney(Coord to)
 {
+    Monster *target;
+
+    if ((target = find_mon_at(rodney.dlvl, to)) != NULL) {
+        if (target->flags & MF_INVISIBLE) {
+            pline("Wait! There's a %s there!", target->type->name);
+            target->flags &= ~MF_INVISIBLE;
+            return 1;
+        } else {
+            return rodney_attacks(target, false);
+        }
+    }
+
     if (to.x < 0 || to.y < 0 || to.x >= LEVEL_HEIGHT || to.y >= LEVEL_WIDTH)
         return 0;
 
@@ -254,6 +266,10 @@ int zap()
 }
 
 
+/**
+ * Opens a door
+ * @return The number of turns the action took
+ */
 int open()
 {
     Coord direction = get_direction();

@@ -10,13 +10,15 @@
 #include "opmorl.h"
 
 
-/* Map tile definitions
- * MUST BE in the same order as tile definitions in opmorl.h */
+/**
+ * Map tile definitions
+ * MUST BE in the same order as tile definitions in opmorl.h
+ */
 struct s_tile_type tile_types[NB_TILE_TYPES] =
         {
                 {false, '#', CLR_DEFAULT},   // wall
                 {true,  '.', CLR_DEFAULT},   // corridor
-                {true,  '-', CLR_DEFAULT},   // open door
+                {true,  ' ', CLR_DEFAULT},   // open door (special sym)
                 {false, '+', CLR_DEFAULT},   // closed door
                 {true,  '.', CLR_DEFAULT},   // floor
                 {true,  '<', CLR_DEFAULT},   // stairs down
@@ -24,7 +26,7 @@ struct s_tile_type tile_types[NB_TILE_TYPES] =
                 {false, ' ', CLR_DEFAULT},   // ground
                 {false, ' ', CLR_DEFAULT},   // collapsed
                 {true,  '^', CLR_DEFAULT},   // closed trapdoor
-                {false, ' ', CLR_DEFAULT},   // open trapdoor
+                {false, '.', CLR_DEFAULT},   // open trapdoor
                 {true,  '/', CLR_DEFAULT},   // lever
                 {false, '=', CLR_YELLOW},    // pipe
                 {false, 'o', CLR_YELLOW},    // pipe exhaust
@@ -141,8 +143,6 @@ static void make_path(TileType (*level)[LEVEL_WIDTH], Coord from, Coord to)
             x_target = cur_x - x_span;
         }
 
-
-        // TODO: add support for door generation
         for (int i_y = cur_y; i_y <= y_target; i_y++) {
             if (!IS_WALKABLE(level[cur_x][i_y]))
                 level[cur_x][i_y] = T_FLOOR;
@@ -162,13 +162,17 @@ static void make_path(TileType (*level)[LEVEL_WIDTH], Coord from, Coord to)
 
 
 /**
- * Checks if there is a walkable path from a point to another.
- * @param dlvl The level at which to perform the search
+ * Checks if there is a walkable path from a point to another in an abstract
+ * level representation (mask).
+ *
+ * @param mask The mask on which to perform the check. `true` cells are
+ * considered walkable, others not.
+ * @param width The width of the mask.
  * @param from Coordinates of the first point.
  * @param to Coordinates of the second point.
  * @return Whether there is a path from the first point to the second.
  */
-bool can_walk(int dlvl, Coord from, Coord to)
+static bool can_walk_mask(bool *mask, int width, Coord from, Coord to)
 {
     bool checked[LEVEL_HEIGHT][LEVEL_WIDTH];
     Coord stack[LEVEL_HEIGHT * LEVEL_WIDTH];
@@ -192,7 +196,7 @@ bool can_walk(int dlvl, Coord from, Coord to)
             for (int y = cur.y - 1; y <= cur.y + 1; y++) {
                 if (y < 0 || y >= LEVEL_WIDTH)
                     continue;
-                if (IS_WALKABLE(maps[dlvl][x][y]) && !checked[x][y]) {
+                if (mask[x * width + y] && !checked[x][y]) {
                     stack_pointer++;
                     stack[stack_pointer].x = x;
                     stack[stack_pointer].y = y;
@@ -207,11 +211,88 @@ bool can_walk(int dlvl, Coord from, Coord to)
 
 
 /**
+ * Checks if there is a walkable path from a point to another. A path is
+ * considered walkable if it only contains walkable tiles or closed doors.
+ *
+ * @param dlvl The level at which to perform the check
+ * @param from Coordinates of the first point.
+ * @param to Coordinates of the second point.
+ * @return Whether there is a path from the first point to the second.
+ */
+static bool can_walk(int dlvl, Coord from, Coord to)
+{
+    bool *mask = calloc((size_t) LEVEL_HEIGHT * LEVEL_WIDTH, sizeof(bool));
+
+    for (int i_x = 0; i_x < LEVEL_HEIGHT; i_x++) {
+        for (int i_y = 0; i_y < LEVEL_WIDTH; i_y++) {
+            if (IS_WALKABLE(maps[dlvl][i_x][i_y]) ||
+                maps[dlvl][i_x][i_y] == T_CLOSED_DOOR) {
+                mask[i_x * LEVEL_WIDTH + i_y] = true;
+            }
+        }
+    }
+
+    bool can_walk = can_walk_mask(mask, LEVEL_WIDTH, from, to);
+    free(mask);
+    return can_walk;
+}
+
+
+/**
+ * Checks if it is possible to walk between two points in a level where a
+ * blob has been added. Used to check that the blob will not prevent essential
+ * movement.
+ *
+ * @param blob A blob representation. true cells represent areas made unwalkable
+ * by the blob.
+ * @param height, width Blob size
+ * @param blob_pos Upper left coordinates of the blob
+ * @param level Level map
+ * @param from Start point
+ * @param to End point
+ * @return Whether it is possible to walk between the start and end points.
+ */
+static bool can_walk_blob(bool *blob, int height, int width, Coord blob_pos,
+                          TileType (*level)[LEVEL_WIDTH], Coord from, Coord to)
+{
+    if (blob_pos.x < 0 || blob_pos.y < 0 ||
+        blob_pos.x + height >= LEVEL_HEIGHT ||
+        blob_pos.y + width >= LEVEL_WIDTH) {
+        print_to_log("WARN: tried to blit blob outside of level");
+        return false;
+    }
+
+    bool *mask = calloc((size_t) LEVEL_HEIGHT * LEVEL_WIDTH, sizeof(bool));
+
+    for (int i_x = 0; i_x < LEVEL_HEIGHT; i_x++) {
+        for (int i_y = 0; i_y < LEVEL_WIDTH; i_y++) {
+            if ((IS_WALKABLE(level[i_x][i_y]) ||
+                 level[i_x][i_y] == T_CLOSED_DOOR)) {
+                mask[i_x * LEVEL_WIDTH + i_y] = true;
+            }
+        }
+    }
+
+    for (int i_x = 0; i_x < height; i_x++) {
+        for (int i_y = 0; i_y < width; i_y++) {
+            if (blob[i_x * width + i_y])
+                mask[(i_x + blob_pos.x) * width + (i_y + blob_pos.y)] = false;
+        }
+    }
+
+    bool can_walk = can_walk_mask(mask, LEVEL_WIDTH, from, to);
+    free(mask);
+    return can_walk;
+}
+
+
+/**
  * Checks whether a tile is visible from another tile on a given level.
  * Walkable tiles are considered see-through, other are opaque. The first
- * opaque tile on the way is considered visible. The algorithm is
+ * opaque tile on the way is considered visible. The algorithm should be
  * invertible, that is, if point A is visible from point B, then B is
  * visible from A.
+ *
  * @param dlvl The level on which to perform the calculation
  * @param from The coordinates of the source point
  * @param to The coordinates of the destination point
@@ -277,8 +358,7 @@ void recompute_visibility()
             if (visible || god_mode)
                 visibility_map[rodney.dlvl][i_x][i_y] = TS_SEEN;
 
-            else if (!visible &&
-                     visibility_map[rodney.dlvl][i_x][i_y] != TS_UNDISCOVERED)
+            else if (visibility_map[rodney.dlvl][i_x][i_y] != TS_UNDISCOVERED)
                 visibility_map[rodney.dlvl][i_x][i_y] = TS_UNSEEN;
 
             else
@@ -289,13 +369,19 @@ void recompute_visibility()
 
 /**
  * Runs Dijkstra's algorithm between two points.
+ *
+ * Djikstra's is simplified by the fact that there is a constant distance
+ * between all tiles, so it's really just a BFS. The `prev` array stores
+ * the coordinates of the parent tile for every tile, which allows us to
+ * backtrack and optionally return the first step on the shortest path.
+ *
  * @param dlvl The level on which to run the algorithm
  * @param from The source point coordinates
  * @param to The destination point coordinates
  * @param next Pointer in which the next position in the shortest path will be
- * stored if true is returned.
+ * stored if true is returned. Can be set to NULL.
  * @param can_have_monst If set to false, only paths containing no monsters
- * will be considered
+ * will be considered.
  * @return Whether there is a path between the source and destionation points.
  */
 bool dijkstra(int dlvl, Coord from, Coord to, Coord *next,
@@ -352,7 +438,8 @@ bool dijkstra(int dlvl, Coord from, Coord to, Coord *next,
                         while (backtrack_cur.x != from.x ||
                                backtrack_cur.y != from.y) {
                             coming_from = backtrack_cur;
-                            backtrack_cur = prev[backtrack_cur.x][backtrack_cur.y];
+                            backtrack_cur =
+                                    prev[backtrack_cur.x][backtrack_cur.y];
                         }
 
                         *next = coming_from;
@@ -371,6 +458,168 @@ bool dijkstra(int dlvl, Coord from, Coord to, Coord *next,
     return false;
 }
 
+/**
+ * Helper function to place a level
+ * @param type The type of the level to place
+ * @param position The number of normal levels above
+ */
+static void place_level(enum e_dungeon_level_type type, int position)
+{
+    int i_dlvl;
+
+    for (i_dlvl = 0; i_dlvl < DLVL_MAX && position != 0; i_dlvl++) {
+        if (dlvl_types[i_dlvl] == DLVL_NORMAL)
+            position--;
+    }
+    dlvl_types[i_dlvl] = type;
+}
+
+
+/**
+ * Picks a layout for the dungeon levels.
+ * - Mark the last level as DLVL_LAST
+ * - Mark a random level between 1/3 and 2/3 as the administrator's level
+ * - Mark a random level between the administrator's level and the bottom
+ *   as the archmage
+ * - Either (50/50) put a bank and a market or barracks somewhere.
+ * - Flood the last 2-4 levels
+ * - Try to replace some floors with maintenance levels
+ */
+void layout_dungeon()
+{
+    int remaining_levels = DLVL_MAX;
+
+    for (int i_dlvl = 0; i_dlvl < DLVL_MAX; i_dlvl++) {
+        dlvl_types[i_dlvl] = DLVL_NORMAL;
+        dlvl_flags[i_dlvl] = 0;
+    }
+
+    dlvl_types[DLVL_MAX - 1] = DLVL_LAST;
+    remaining_levels--;
+
+    int administrator = rand_int(DLVL_MAX / 3, 2 * DLVL_MAX / 3 - 1);
+    dlvl_types[administrator] = DLVL_ADMINISTRATOR;
+    remaining_levels--;
+
+    int archmage = rand_int(administrator + 1, DLVL_MAX - 2);
+    dlvl_types[archmage] = DLVL_ARCHMAGE;
+    remaining_levels--;
+
+    if (rand_int(0, 1) == 0) {
+        // Bank and market
+        int market = rand_int(1, remaining_levels - 2);
+        place_level(DLVL_MARKET, market);
+        remaining_levels--;
+
+        int bank = rand_int(market + 1, remaining_levels - 1);
+        place_level(DLVL_BANK, bank);
+    } else {
+        // Barracks
+        int barracks = rand_int(1, remaining_levels - 1);
+        place_level(DLVL_BARRACKS, barracks);
+    }
+
+    for (int i = 0; i < 4; i++) {
+        int candidate = rand_int(1, DLVL_MAX - 1);
+        if (dlvl_types[candidate] == DLVL_NORMAL)
+            dlvl_types[candidate] = DLVL_MAINTENANCE;
+    }
+
+    int nb_flooded = rand_int(2, 4);
+    for (int i = DLVL_MAX - 1; i > DLVL_MAX - 1 - nb_flooded; i--) {
+        dlvl_flags[i] |= DFLAGS_FLOODED;
+    }
+}
+
+
+/**
+ * Helper function to count the number of neighbors of a cell that are set to
+ * true in a boolean array.
+ * @param array The array in which to perform the check
+ * @param height, width The dimensions of the array
+ * @param x, y The coordinates of the cell to check
+ * @return The number of neighbors of that cell that are set to true.
+ */
+static int count_neighbors(bool *array, int height, int width, int x,
+                           int y)
+{
+    int count = 0;
+
+    for (int i_x = -1; i_x <= 1; i_x++) {
+        for (int i_y = -1; i_y <= 1; i_y++) {
+            if (i_x == i_y == 0)
+                continue;
+
+            int check_x = x + i_x;
+            if (check_x < 0 || check_x >= height)
+                continue;
+
+            int check_y = y + i_y;
+            if (check_y < 0 || check_y >= width)
+                continue;
+
+            if (array[check_x * width + check_y])
+                count++;
+        }
+    }
+
+    return count;
+}
+
+/**
+ * Generate a random blob, approximately of given size.
+ *
+ * This is done by selecting 45% of the cells at random, and then applying
+ * 5 successive rounds of smoothing to the resulting shape.
+ *
+ * The method is from here:
+ * https://www.rockpapershotgun.com/2015/07/28/how-do-roguelikes-generate-levels/
+ *
+ * @param array An allocated array that will be filled in with the shape.
+ * @param height, width The dimensions of the array (the shape will be about
+ * that size)
+ */
+void generate_blob(bool *array, int height, int width)
+{
+    bool steps[2][height][width];
+
+    int parity = 0;
+
+    for (int i_x = 0; i_x < height; i_x++) {
+        for (int i_y = 0; i_y < width; i_y++) {
+            if (rand_int(1, 100) <= 45)
+                steps[0][i_x][i_y] = false;
+            else
+                steps[0][i_x][i_y] = true;
+        }
+    }
+
+    for (int iteration = 0; iteration < 5; iteration++) {
+        parity = !parity;
+        for (int i_x = 0; i_x < height; i_x++) {
+            for (int i_y = 0; i_y < width; i_y++) {
+                int true_neighbors = count_neighbors((bool *) steps[!parity],
+                                                     height, width, i_x, i_y);
+
+                if (true_neighbors < 4)
+                    steps[parity][i_x][i_y] = false;
+                else if (true_neighbors >= 6)
+                    steps[parity][i_x][i_y] = true;
+                else
+                    steps[parity][i_x][i_y] = steps[!parity][i_x][i_y];
+            }
+        }
+    }
+
+    for (int i_x = 0; i_x < height; i_x++) {
+        for (int i_y = 0; i_y < width; i_y++) {
+            array[i_x * width + i_y] = steps[parity][i_x][i_y];
+        }
+    }
+}
+
+
+/** Grid loading features **/
 
 enum e_grid_tile
 {

@@ -31,7 +31,7 @@ Color magic_class_colors[NB_MAGIC_CLASSES] = {CLR_WHITE, CLR_GREEN, CLR_MAGENTA,
 
 int main(void)
 {
-    init_ncurses();
+    system_init();
     init_game();
     display_everything();
     game_loop();

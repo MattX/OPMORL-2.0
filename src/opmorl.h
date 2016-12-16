@@ -187,11 +187,11 @@ typedef struct s_object
     const ObjectType *type;
 
     Coord pos;
-    int dlvl; /* Coordinates : dlvl (we want persistent levels) */
-    int uses_left; /* For potions */
-    int cooldown; /* Effect cooldown */
-    int enchant; /* Enchant OR amount for money */
-    int flags; /* Such as invisible... */
+    int dlvl; /** Coordinates : dlvl (we want persistent levels) */
+    int uses_left; /** For potions */
+    int cooldown; /** Effect cooldown */
+    int enchant; /** Enchant OR amount for money */
+    int flags; /** Such as invisible... */
 } Object;
 
 ObjectType object_types[NB_OBJECTS];
@@ -370,6 +370,36 @@ struct s_tile_type
 extern struct s_tile_type tile_types[NB_TILE_TYPES];
 
 
+/** Visibility and dungeon layout */
+
+/**
+ * Visibility status of a tile
+ */
+typedef enum
+{
+    TS_UNDISCOVERED,
+    TS_UNSEEN,
+    TS_SEEN
+} TileStatus;
+
+/**
+ * Dungeon level types
+ */
+enum e_dungeon_level_type
+{
+    DLVL_NORMAL, DLVL_ARCHMAGE, DLVL_MAINTENANCE,
+    DLVL_ADMINISTRATOR, DLVL_MARKET, DLVL_BANK, DLVL_LAST, DLVL_BARRACKS
+};
+
+/**
+ * Dungeon level flags
+ */
+enum e_dungeon_level_flags
+{
+    DFLAGS_FLOODED = 0x01
+};
+
+
 /***********/
 
 typedef struct
@@ -392,7 +422,7 @@ typedef struct
 
 /* Prototypes */
 
-void init_ncurses();
+void system_init();
 
 void init_game();
 
@@ -476,8 +506,6 @@ bool check_dead(Monster *target, bool rodney_killed);
 
 bool has_mixin(const ObjectType *type, MixinType mixin);
 
-bool can_walk(int, Coord, Coord);
-
 bool dijkstra(int dlvl, Coord to, Coord from, Coord *next,
               bool can_have_monst);
 
@@ -524,15 +552,14 @@ Coord coord_add(Coord, Coord);
 
 int open();
 
+void layout_dungeon();
+
+void log_layout();
+
 /* Globals */
 
-typedef enum
-{
-    TS_UNDISCOVERED,
-    TS_UNSEEN,
-    TS_SEEN
-} TileStatus;
-
+enum e_dungeon_level_type dlvl_types[DLVL_MAX];
+int dlvl_flags[DLVL_MAX];
 
 TileType maps[DLVL_MAX][LEVEL_HEIGHT][LEVEL_WIDTH];
 TileStatus visibility_map[DLVL_MAX][LEVEL_HEIGHT][LEVEL_WIDTH];

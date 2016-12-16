@@ -9,35 +9,24 @@
 
 #include "opmorl.h"
 
+/**
+ * Processes a movement key: either movement or attack, depending on the
+ * situation
+ * @param c The movement key
+ * @return The number of turns the action took to complete
+ */
 int process_move_input(char c)
 {
     Coord to = rodney.pos;
-    Monster *target;
 
-    if (c == 'h' || c == 'y' || c == 'b')
-        to.y--;
-    else if (c == 'l' || c == 'u' || c == 'n')
-        to.y++;
-
-    if (c == 'j' || c == 'b' || c == 'n')
-        to.x++;
-    else if (c == 'k' || c == 'y' || c == 'u')
-        to.x--;
-
-    if ((target = find_mon_at(rodney.dlvl, to)) != NULL) {
-        if (target->flags & MF_INVISIBLE) {
-            pline("Wait! There's a %s there!", target->type->name);
-            target->flags &= ~MF_INVISIBLE;
-            return 1;
-        } else {
-            return rodney_attacks(target, false);
-        }
-    }
+    to = coord_add(to, letter_to_direction(c));
 
     return move_rodney(to);
 }
 
-
+/**
+ * Shows the relevant environment messages
+ */
 void show_env_messages()
 {
     LinkedList *objs_on_tile = find_objs_at(rodney.dlvl, rodney.pos);
@@ -50,6 +39,11 @@ void show_env_messages()
               object_name((Object *) objs_on_tile->head->element));
 }
 
+
+/**
+ * Processes one (or more) full turns
+ * @param c The command the player entered
+ */
 void process_turn(char c)
 {
     int turn_elapsed = 0;
@@ -118,7 +112,7 @@ void process_turn(char c)
         break;
     }
 
-    if (turn_elapsed) {
+    while (turn_elapsed--) {
         move_monsters();
         regain_hp();
         recompute_visibility();

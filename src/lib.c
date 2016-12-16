@@ -106,7 +106,7 @@ int ndn(int num_dice, int faces)
 
 /**
  * Returns the direction represented by a given letter, with the following map:
- * u  k  i
+ * y  k  u
  *  \ | /
  * h- . -l
  *  / | \
@@ -118,11 +118,11 @@ Coord letter_to_direction(char letter)
 {
     Coord res = {0, 0};
 
-    if (letter == 'u' || letter == 'h' || letter == 'b')
+    if (letter == 'y' || letter == 'h' || letter == 'b')
         res.y--;
-    if (letter == 'i' || letter == 'l' || letter == 'n')
+    if (letter == 'u' || letter == 'l' || letter == 'n')
         res.y++;
-    if (letter == 'u' || letter == 'k' || letter == 'i')
+    if (letter == 'y' || letter == 'k' || letter == 'u')
         res.x--;
     if (letter == 'b' || letter == 'j' || letter == 'n')
         res.x++;

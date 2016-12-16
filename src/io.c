@@ -390,8 +390,8 @@ Object *select_from_inv(int possible_types)
 }
 
 
-/*
- * print_to_log: print a message to the log file.
+/**
+ * Print a message to the log file.
  */
 void print_to_log(char *format, ...)
 {
@@ -399,6 +399,8 @@ void print_to_log(char *format, ...)
     va_start(args, format);
     vfprintf(log_file, format, args);
     va_end(args);
+
+    fflush(log_file);
 }
 
 
@@ -441,4 +443,18 @@ Coord get_direction()
     char dir = get_input();
 
     return letter_to_direction(dir);
+}
+
+/**
+ * Logs the dungeon layout
+ */
+void log_layout()
+{
+#ifdef DEBUG
+    print_to_log("** Layout\n");
+    for (int i_dlvl = 0; i_dlvl < DLVL_MAX - 1; i_dlvl++) {
+        print_to_log("%d: %d (flags %d)\n", i_dlvl, dlvl_types[i_dlvl],
+                     dlvl_flags[i_dlvl]);
+    }
+#endif
 }
