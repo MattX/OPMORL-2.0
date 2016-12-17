@@ -16,28 +16,28 @@
  */
 struct s_tile_type tile_types[NB_TILE_TYPES] =
         {
-                /* walkable, sym, color */
-                {false, '#', CLR_DEFAULT},   // wall
-                {true,  '.', CLR_DEFAULT},   // corridor
-                {true,  '-', CLR_DEFAULT},   // open door (special sym)
-                {false, '+', CLR_DEFAULT},   // closed door
-                {true,  '.', CLR_DEFAULT},   // floor
-                {true,  '<', CLR_DEFAULT},   // stairs down
-                {true,  '>', CLR_DEFAULT},   // stairs up
-                {false, ' ', CLR_DEFAULT},   // ground
-                {true,  ',', CLR_YELLOW},    // collapsed
-                {true,  '^', CLR_DEFAULT},   // closed trapdoor
-                {false, '-', CLR_DEFAULT},   // open trapdoor
-                {true,  '/', CLR_DEFAULT},   // lever
-                {false, '=', CLR_YELLOW},    // pipe
-                {false, 'o', CLR_YELLOW},    // pipe exhaust
-                {true,  ';', CLR_GREEN},     // grass
-                {true,  ';', CLR_DEFAULT},   // fungus
-                {false, 'T', CLR_DEFAULT},   // tree
-                {true,  '}', CLR_BLUE},      // fountain
-                {true,  '.', CLR_WHITE},     // portcullis up
-                {false, '#', CLR_WHITE},     // portcullis down
-                {false, '*', CLR_DEFAULT},   // rubble
+                /* walkable, LOS, sym, color */
+                {false, false, '#', CLR_DEFAULT},   // wall
+                {true,  true,  '.', CLR_DEFAULT},   // corridor
+                {true,  true,  'W', CLR_DEFAULT},   // open door (special sym)
+                {false, false, '+', CLR_DEFAULT},   // closed door
+                {true,  true,  '.', CLR_DEFAULT},   // stone floor
+                {true,  true,  '<', CLR_DEFAULT},   // stairs down
+                {true,  true,  '>', CLR_DEFAULT},   // stairs up
+                {false, false, ' ', CLR_DEFAULT},   // ground
+                {false, true,  '.', CLR_DARKGRAY},  // collapsed
+                {true,  true,  '^', CLR_DEFAULT},   // locked trapdoor
+                {false, true,  '-', CLR_DEFAULT},   // open trapdoor
+                {true,  true,  '/', CLR_DEFAULT},   // lever
+                {false, false, 'W', CLR_YELLOW},    // pipe (special sym)
+                {false, false, 'o', CLR_YELLOW},    // pipe exhaust
+                {true,  true,  ';', CLR_GREEN},     // grass
+                {true,  true,  ';', CLR_DEFAULT},   // fungus
+                {false, false, 'T', CLR_DEFAULT},   // tree
+                {true,  true,  '}', CLR_BLUE},      // fountain
+                {true,  true,  '.', CLR_STEELBLUE}, // portcullis up
+                {false, true,  '#', CLR_STEELBLUE}, // portcullis down
+                {true,  false, '*', CLR_LIGHTGRAY}, // rubble
         };
 
 
@@ -45,18 +45,43 @@ struct s_tile_type tile_types[NB_TILE_TYPES] =
 const int chasm_width = 40;
 const int chasm_height = 15;
 
-/** Size of a rubble area */
-const int rubble_width = 7;
-const int rubble_height = 4;
+/** Size of a patch area */
+const int patch_width = 7;
+const int patch_height = 4;
 
 
 /**
  * Checks if the coordinates are valid (ie in the map)
- * @param x, y
  */
 static bool valid_coordinates(int x, int y)
 {
     return (x >= 0 && x < LEVEL_HEIGHT && y >= 0 && y < LEVEL_WIDTH);
+}
+
+
+/**
+ * Helper function: returns the coordinates of a neighboring cell.
+ * @param around The point around which to return a neighbor
+ * @param n The neighbor index:
+ *    4  0  5
+ *    1  .  2
+ *    6  3  7
+ * @warning May return invalid (out-of-map) coordinates.
+ */
+Coord get_neighbor(Coord around, int n)
+{
+    Coord result = around;
+
+    if (n == 4 || n == 0 || n == 5)
+        result.x--;
+    if (n == 6 || n == 3 || n == 7)
+        result.x++;
+    if (n == 4 || n == 1 || n == 6)
+        result.y--;
+    if (n == 5 || n == 2 || n == 7)
+        result.y++;
+
+    return result;
 }
 
 
@@ -80,7 +105,9 @@ static bool fits_criteria(int dlvl, Coord pos, bool can_have_mon, int tile_type)
           IS_WALKABLE(maps[dlvl][pos.x][pos.y])) ||
          (looking_for_specific_type &&
           maps[dlvl][pos.x][pos.y] == tile_type)) &&
-        (!can_have_mon || find_mon_at(dlvl, pos) == NULL)) {
+        (!can_have_mon ||
+         (find_mon_at(dlvl, pos) == NULL && pos.x != rodney.pos.x &&
+          pos.y != rodney.pos.y))) {
         return true;
     }
     return false;
@@ -89,7 +116,7 @@ static bool fits_criteria(int dlvl, Coord pos, bool can_have_mon, int tile_type)
 /**
  * Returns a random walkable tile on the specified map level, fitting given
  * criteria.
- * @dlvl the dungeon level on which to perform the search
+ * @param dlvl the dungeon level on which to perform the search
  * @param coords pointer where the location of a tile will be stored.
  * @param can_have_mon if false, the tile will not have a monster on it.
  * @param tile_type if set in the range [0, NB_TILE_TYPES-1], will only look
@@ -252,34 +279,24 @@ static bool can_walk_mask(bool *mask, int width, Coord from, Coord to)
 
     stack[0] = from;
 
-    print_to_log("Printing mask:\n   ");
-    for (int i_x = 0; i_x < LEVEL_HEIGHT; i_x++) {
-        for (int i_y = 0; i_y < LEVEL_WIDTH; i_y++) {
-            print_to_log("%d", mask[i_x * width + i_y]);
-        }
-        print_to_log("\n   ");
-    }
-    print_to_log("\n");
-
     while (stack_pointer >= 0) {
-        Coord cur = stack[stack_pointer];
+        Coord cur_root = stack[stack_pointer];
         stack_pointer--;
 
-        if (cur.x == to.x && cur.y == to.y)
+        if (cur_root.x == to.x && cur_root.y == to.y)
             return true;
 
-        for (int x = cur.x - 1; x <= cur.x + 1; x++) {
-            for (int y = cur.y - 1; y <= cur.y + 1; y++) {
-                if (!valid_coordinates(x, y))
-                    continue;
-                if (mask[x * width + y] && !checked[x][y]) {
-                    stack_pointer++;
-                    stack[stack_pointer] = (Coord) {x, y};
-                    checked[x][y] = true;
-                }
+        for (int i_neighbor = 0; i_neighbor < 8; i_neighbor++) {
+            Coord cur = get_neighbor(cur_root, i_neighbor);
+            if (!valid_coordinates(cur.x, cur.y))
+                continue;
+
+            if (mask[cur.x * width + cur.y] && !checked[cur.x][cur.y]) {
+                stack_pointer++;
+                stack[stack_pointer] = cur;
+                checked[cur.x][cur.y] = true;
             }
         }
-
     }
 
     return false;
@@ -352,7 +369,8 @@ static bool can_walk_blob(bool *blob, int height, int width, Coord blob_pos,
     for (int i_x = 0; i_x < height; i_x++) {
         for (int i_y = 0; i_y < width; i_y++) {
             if (blob[i_x * width + i_y])
-                mask[(i_x + blob_pos.x) * width + (i_y + blob_pos.y)] = false;
+                mask[(i_x + blob_pos.x) * LEVEL_WIDTH +
+                     (i_y + blob_pos.y)] = false;
         }
     }
 
@@ -398,7 +416,7 @@ is_visible(int dlvl, Coord from, Coord to, Coord *block, bool monsters_block)
         if (cur.x == to.x && cur.y == to.y)
             return true;
 
-        if (!IS_WALKABLE(maps[dlvl][cur.x][cur.y]) ||
+        if (!IS_TRANSPARENT(maps[dlvl][cur.x][cur.y]) ||
             (monsters_block && find_mon_at(dlvl, cur))) {
             blocked = true;
 
@@ -481,47 +499,41 @@ bool dijkstra(int dlvl, Coord from, Coord to, Coord *next,
 
     while (nb_tiles[rotation] > 0) {
         for (int i_tile = 0; i_tile < nb_tiles[rotation]; i_tile++) {
-            Coord cur = tiles[rotation][i_tile];
+            Coord parent = tiles[rotation][i_tile];
 
-            for (int i_x = cur.x - 1; i_x <= cur.x + 1; i_x++) {
-                if (i_x < 0 || i_x > LEVEL_HEIGHT)
+            for (int i_neighbor = 0; i_neighbor < 8; i_neighbor++) {
+                Coord cur = get_neighbor(parent, i_neighbor);
+                if (!valid_coordinates(cur.x, cur.y))
                     continue;
 
-                for (int i_y = cur.y - 1; i_y <= cur.y + 1; i_y++) {
-                    if (i_y < 0 || i_y > LEVEL_WIDTH)
-                        continue;
+                if (!visited[cur.x][cur.y] &&
+                    IS_WALKABLE(maps[dlvl][cur.x][cur.y]) &&
+                    (can_have_monst || find_mon_at(dlvl, cur) == NULL)) {
+                    tiles[new_rotation][nb_tiles[new_rotation]] = cur;
+                    prev[cur.x][cur.y] = parent;
+                    visited[cur.x][cur.y] = true;
+                    nb_tiles[new_rotation]++;
+                }
 
-                    if (!visited[i_x][i_y] &&
-                        IS_WALKABLE(maps[dlvl][i_x][i_y]) &&
-                        (can_have_monst ||
-                         find_mon_at(dlvl, (Coord) {i_x, i_y}) == NULL)) {
-                        tiles[new_rotation][nb_tiles[new_rotation]].x = i_x;
-                        tiles[new_rotation][nb_tiles[new_rotation]].y = i_y;
-                        prev[i_x][i_y] = cur;
-                        visited[i_x][i_y] = true;
-                        nb_tiles[new_rotation]++;
+                if (cur.x == to.x && cur.y == to.y) {
+                    if (!visited[cur.x][cur.y]) {
+                        return false;
                     }
 
-                    if (i_x == to.x && i_y == to.y) {
-                        if (!visited[i_x][i_y]) {
-                            return false;
-                        }
+                    // Backtrack to find tile to go to
+                    Coord backtrack_cur = cur;
+                    Coord coming_from = parent;
 
-                        // Backtrack to find tile to go to
-                        Coord backtrack_cur = (Coord) {i_x, i_y};
-                        Coord coming_from = cur;
-
-                        while (backtrack_cur.x != from.x ||
-                               backtrack_cur.y != from.y) {
-                            coming_from = backtrack_cur;
-                            backtrack_cur =
-                                    prev[backtrack_cur.x][backtrack_cur.y];
-                        }
-
-                        *next = coming_from;
-
-                        return true;
+                    while (backtrack_cur.x != from.x ||
+                           backtrack_cur.y != from.y) {
+                        coming_from = backtrack_cur;
+                        backtrack_cur =
+                                prev[backtrack_cur.x][backtrack_cur.y];
                     }
+
+                    *next = coming_from;
+
+                    return true;
                 }
             }
         }
@@ -556,7 +568,7 @@ static void place_level(enum e_dungeon_level_type type, int position)
  * - Mark the last level as DLVL_LAST
  * - Mark a random level between 1/3 and 2/3 as the administrator's level
  * - Mark a random level between the administrator's level and the bottom
- *   as the archmage
+ *   as the archmage's level
  * - Either (50/50) put a bank and a market or barracks somewhere.
  * - Flood the last 2-4 levels
  * - Try to replace some floors with maintenance levels
@@ -676,8 +688,6 @@ static void make_blob(bool *array, int height, int width)
             for (int i_y = 0; i_y < width; i_y++) {
                 int true_neighbors = count_neighbors((bool *) steps[!parity],
                                                      height, width, i_x, i_y);
-
-                print_to_log("N%d", true_neighbors);
 
                 if (true_neighbors < 4)
                     steps[parity][i_x][i_y] = false;
@@ -854,24 +864,118 @@ static bool can_place_door(TileType (*level)[LEVEL_WIDTH], Coord pos)
         || pos.y == LEVEL_WIDTH - 1)
         return false;
 
+    // We shouldn't be touching another door
+    for (int i_x = pos.x - 1; i_x <= pos.x + 1; i_x++)
+        for (int i_y = pos.y - 1; i_y <= pos.y + 1; i_y++)
+            if (level[i_x][i_y] == T_OPEN_DOOR ||
+                level[i_x][i_y] == T_CLOSED_DOOR)
+                return false;
+
     // There should be a direction where the path is walled, and another
     // where it is open
-    bool up_walkable = IS_WALKABLE(level[pos.x - 1][pos.y]);
-    bool down_walkable = IS_WALKABLE(level[pos.x + 1][pos.y]);
-    bool left_walkable = IS_WALKABLE(level[pos.x][pos.y - 1]);
-    bool right_walkable = IS_WALKABLE(level[pos.x][pos.y + 1]);
+    bool up_walk = IS_WALKABLE(level[pos.x - 1][pos.y]);
+    bool down_walk = IS_WALKABLE(level[pos.x + 1][pos.y]);
+    bool left_walk = IS_WALKABLE(level[pos.x][pos.y - 1]);
+    bool right_walk = IS_WALKABLE(level[pos.x][pos.y + 1]);
 
-    return (!up_walkable && !down_walkable && left_walkable &&
-            right_walkable) ||
-           (up_walkable && down_walkable && !left_walkable && !right_walkable);
+    return (!up_walk && !down_walk && left_walk && right_walk) ||
+           (up_walk && down_walk && !left_walk && !right_walk);
 }
 
 
 /**
- * Generate walls and doors for a given level
+ * Checks if a point is in a rectangle
+ * @param point Position of the point
+ * @param rectangle_pos, size Position and size of the rectangle
+ */
+static bool in_rectangle(Coord point, Coord rectangle_pos, Coord size)
+{
+    return (point.x >= rectangle_pos.x && point.x <= rectangle_pos.x + size.x &&
+            point.y >= rectangle_pos.y && point.y <= rectangle_pos.y + size.y);
+}
+
+
+/**
+ * Returns the position of the upper left corner of a valid rectangular area
+ * on a level (i.e. an area that does not contain any stairs). The area will
+ * not touch an outside wall (i.e. it won't extend to x=0, y=0, x=HEIGHT-1 or
+ * y=WIDTH-1).
+ * @param dlvl
+ * @param height, width Size of the rectangular area
+ * @param pos Pointer to where the position will be stores
+ * @return Whether such an area was found
+ */
+static bool select_valid_rectangle(int dlvl, int height, int width, Coord *pos)
+{
+    // TODO: write this in a smart way :)
+    Coord stairs_up, stairs_down;
+    int has_stairs_up = find_tile(dlvl, &stairs_up, true, T_STAIRS_UP) > 0;
+    int has_stairs_down =
+            find_tile(dlvl, &stairs_down, true, T_STAIRS_DOWN) > 0;
+
+    for (int attempt = 0; attempt < 100; attempt++) {
+        pos->x = rand_int(1, LEVEL_HEIGHT - height - 2);
+        pos->y = rand_int(1, LEVEL_WIDTH - width - 2);
+
+        if ((!has_stairs_down ||
+             !in_rectangle(stairs_down, *pos, (Coord) {height, width})) &&
+            (!has_stairs_up ||
+             !in_rectangle(stairs_up, *pos, (Coord) {height, width})))
+            return true;
+    }
+
+    return false;
+}
+
+
+/**
+ * Add the administrator's room to a level
+ */
+static void make_administator(int dlvl)
+{
+    const int size_x = 10;
+    const int size_y = 10;
+
+    Coord room_pos;
+    if (!select_valid_rectangle(dlvl, size_x, size_y, &room_pos)) {
+        print_to_log("Could not find a room for the administrator!\n");
+        return;
+    }
+
+    // Make collapsed area
+    for (int i_x = 0; i_x <= size_x; i_x++)
+        for (int i_y = 0; i_y <= size_y; i_y++)
+            if (i_x == 0 || i_x == size_x || i_y == 0 || i_y == size_y)
+                maps[dlvl][room_pos.x + i_x][room_pos.y + i_y] = T_COLLAPSED;
+
+    // Make walls
+    for (int i_x = 1; i_x <= size_x - 1; i_x++)
+        for (int i_y = 1; i_y <= size_y - 1; i_y++)
+            if (i_x == 1 || i_x == size_x - 1 || i_y == 1 || i_y == size_y - 1)
+                maps[dlvl][room_pos.x + i_x][room_pos.y + i_y] = T_WALL;
+
+    // Add a door
+    int door_pos = rand_int(0, size_x - 5);
+    int offset = rand_int(0, 1) * (size_y - 2);
+    maps[dlvl][room_pos.x + 3 + door_pos][room_pos.y + 1 + offset] =
+            T_CLOSED_DOOR;
+}
+
+
+/**
+ * Add the archmage's garden to a level
+ */
+static void make_archmage(int dlvl)
+{
+
+}
+
+
+/**
+ * Generate a given level from the grid file
  * @param dlvl The level to generate
  */
-void make_layout_from_grid(int dlvl)
+void generate_level(int dlvl)
 {
     TileType (*level_map)[LEVEL_WIDTH] = maps[dlvl];
 
@@ -880,7 +984,7 @@ void make_layout_from_grid(int dlvl)
         exit(0);
     }
 
-    // Step 1: load the grid into a new level map
+    // Load the grid into a new level map
     for (int i_x = 0; i_x < LEVEL_HEIGHT; i_x++) {
         for (int i_y = 0; i_y < LEVEL_WIDTH; i_y++) {
             switch (grid[i_x][i_y]) {
@@ -900,7 +1004,7 @@ void make_layout_from_grid(int dlvl)
         }
     }
 
-    // Step 2: randomly keep/delete walls
+    // Randomly keep/delete walls
     for (int i_x = 0; i_x < LEVEL_HEIGHT; i_x++) {
         for (int i_y = 0; i_y < LEVEL_WIDTH; i_y++) {
             if (grid[i_x][i_y] != GT_WALL)
@@ -915,7 +1019,7 @@ void make_layout_from_grid(int dlvl)
         }
     }
 
-    // Step 3: prune separators
+    // Prune separators
     for (int i_x = 0; i_x < LEVEL_HEIGHT; i_x++) {
         for (int i_y = 0; i_y < LEVEL_WIDTH; i_y++) {
             if (grid[i_x][i_y] == GT_SEPARATOR) {
@@ -927,7 +1031,7 @@ void make_layout_from_grid(int dlvl)
         }
     }
 
-    // Step 4: Add stairs
+    // Add stairs
     Coord stair_down, stair_up;
     bool has_stair_down = false, has_stair_up = false;
 
@@ -962,35 +1066,43 @@ void make_layout_from_grid(int dlvl)
         has_stair_up = true;
     }
 
-    // Step 5: Check that the level is traversable
+    // Check that the level is traversable
     if (has_stair_down && has_stair_up) {
         if (!can_walk(dlvl, stair_down, stair_up))
             make_path(level_map, stair_down, stair_up);
     }
 
-    // Step 6: add doors
+    // Add doors
     for (int i_x = 0; i_x < LEVEL_HEIGHT; i_x++)
         for (int i_y = 0; i_y < LEVEL_WIDTH; i_y++)
-            if (can_place_door(level_map, (Coord) {i_x, i_y}))
+            if (can_place_door(level_map, (Coord) {i_x, i_y}) &&
+                level_map[i_x][i_y] != T_STAIRS_DOWN &&
+                level_map[i_x][i_y] != T_STAIRS_UP)
                 if ((!IS_WALKABLE(level_map[i_x][i_y]) && rand_int(0, 30) <= 2)
                     ||
                     (IS_WALKABLE(level_map[i_x][i_y]) &&
                      rand_int(0, 40) <= 1)) {
-                    if (rand_int(0, 2) == 0)
+                    if (rand_int(0, 5) == 0)
                         level_map[i_x][i_y] = T_OPEN_DOOR;
                     else
                         level_map[i_x][i_y] = T_CLOSED_DOOR;
                 }
 
-    // Step 7: Add collapsed area
-    if (dlvl != DLVL_MAX - 1 && rand_int(1, 100) <= 40) {
+    // TODO: add traps & features
+    // TODO: add pipes on maintenance levels
+    // TODO: add patches of fungus/grass
+
+    // Potentially add collapsed area
+    if (dlvl != DLVL_MAX - 1 && rand_int(1, 100) <= 40 &&
+        (dlvl_types[dlvl] == DLVL_NORMAL ||
+         dlvl_types[dlvl] == DLVL_MAINTENANCE)) {
         bool *blob = calloc((size_t) chasm_height * chasm_width, sizeof(bool));
         make_blob(blob, chasm_height, chasm_width);
         for (int attempt = 0; attempt < 5; attempt++) {
             Coord blob_pos;
             blob_pos.x = rand_int(0, LEVEL_HEIGHT - chasm_height - 1);
             blob_pos.y = rand_int(0, LEVEL_WIDTH - chasm_width - 1);
-            if (!has_stair_up || !has_stair_down ||
+            if (has_stair_up && has_stair_down &&
                 can_walk_blob(blob, chasm_height, chasm_width, blob_pos, dlvl,
                               stair_down, stair_up)) {
                 blit_blob(dlvl, blob, chasm_height, chasm_width, blob_pos,
@@ -999,7 +1111,18 @@ void make_layout_from_grid(int dlvl)
         }
     }
 
-    // Step 8: Set visibility map
+    // Make special levels. TODO: markets, banks, barracks
+    switch (dlvl_types[dlvl]) {
+    case DLVL_ADMINISTRATOR:
+        make_administator(dlvl);
+        break;
+    case DLVL_ARCHMAGE:
+        break;
+    default:
+        break;
+    }
+
+    // Set visibility map
     for (int i_x = 0; i_x < LEVEL_HEIGHT; i_x++)
         for (int i_y = 0; i_y < LEVEL_WIDTH; i_y++)
             visibility_map[dlvl][i_x][i_y] = TS_UNDISCOVERED;

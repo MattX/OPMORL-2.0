@@ -50,13 +50,22 @@
 typedef enum e_color
 {
     CLR_DEFAULT, /* COLOR_PAIR(0) is the default back/fore ground colors */
-    CLR_WHITE,
+    CLR_BLACK,
+    CLR_RED,
+    CLR_GREEN,
     CLR_YELLOW,
     CLR_BLUE,
     CLR_MAGENTA,
     CLR_CYAN,
-    CLR_RED,
-    CLR_GREEN,
+    CLR_WHITE,
+
+    /* Add custom colors after this line */
+
+            CLR_LIGHTGRAY,
+    CLR_DARKGRAY,
+    CLR_LIGHTGREEN,
+    CLR_DARKGREEN,
+    CLR_STEELBLUE,
 } Color;
 /* Here we have stuff like CLR_ORANGE or whatever, that we have initialized in
  * init_color, and then we just have, before printing a monster/object, to call
@@ -355,17 +364,20 @@ typedef enum
     T_PORTCULLIS_UP,
     T_PORTCULLIS_DOWN,
     T_RUBBLE,
+    T_MAP,
     NB_TILE_TYPES
 } TileType;
 
 struct s_tile_type
 {
     bool walkable;
+    bool transparent;
     char sym;
     Color color;
 };
 
 #define IS_WALKABLE(x) (tile_types[x].walkable)
+#define IS_TRANSPARENT(x) (tile_types[x].transparent)
 
 extern struct s_tile_type tile_types[NB_TILE_TYPES];
 
@@ -380,7 +392,16 @@ typedef enum
     TS_UNDISCOVERED,
     TS_UNSEEN,
     TS_SEEN
-} TileStatus;
+} TileVisibilityStatus;
+
+
+/**
+ * General tile flags
+ */
+typedef enum
+{
+    TF_DISCOVERED = 1 << 1,
+} TileFlag;
 
 /**
  * Dungeon level types
@@ -528,7 +549,7 @@ bool has_inventory_effect(MixinType effect);
 
 char *object_name(Object *obj);
 
-int change_dlvl_stairs(int, int);
+int change_dlvl(int, int);
 
 int use();
 
@@ -542,7 +563,7 @@ void show_intro();
 
 bool load_grid();
 
-void make_layout_from_grid(int dlvl);
+void generate_level(int dlvl);
 
 Coord letter_to_direction(char);
 
@@ -550,7 +571,7 @@ Coord get_direction();
 
 Coord coord_add(Coord, Coord);
 
-int open();
+int toggle_door(Coord direction, bool open);
 
 void layout_dungeon();
 
@@ -561,14 +582,18 @@ bool find_closest(int dlvl, Coord *coords, bool can_have_mon, int tile_type,
 
 void take_damage(int damage);
 
+Coord get_neighbor(Coord around, int n);
+
 /* Globals */
 
 enum e_dungeon_level_type dlvl_types[DLVL_MAX];
 int dlvl_flags[DLVL_MAX];
 
 TileType maps[DLVL_MAX][LEVEL_HEIGHT][LEVEL_WIDTH];
-TileStatus visibility_map[DLVL_MAX][LEVEL_HEIGHT][LEVEL_WIDTH];
+TileVisibilityStatus visibility_map[DLVL_MAX][LEVEL_HEIGHT][LEVEL_WIDTH];
 bool visited[DLVL_MAX];
+LinkedList *lever_connections;
+
 Player rodney;
 int turn;
 

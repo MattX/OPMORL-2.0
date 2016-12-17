@@ -37,32 +37,55 @@ void display_everything()
     display_map();
 }
 
+/**
+ * Returns the orientation of a tile type at a given coordinate. This is made
+ * to recognize the following situations (assuming type == wall)
+ *
+ *     ...          .#.        .#.  .#.
+ *     #X#          .X.        .X.  .X#
+ *     ...          .#.        ...  .#.
+ *  Horizontal    Vertical       None
+ *
+ * @param dlvl
+ * @param pos
+ * @param type
+ * @return 1 for horizontal, -1 for vertical, 0 for none
+ */
+static int get_orientation(int dlvl, Coord pos, TileType type)
+{
+    // There is no orientation at the edge of the map
+    if (pos.x == 0 || pos.x == LEVEL_HEIGHT - 1 || pos.y == 0
+        || pos.y == LEVEL_WIDTH - 1)
+        return 0;
+
+    bool up = maps[dlvl][pos.x - 1][pos.y] == type;
+    bool down = maps[dlvl][pos.x + 1][pos.y] == type;
+    bool left = maps[dlvl][pos.x][pos.y - 1] == type;
+    bool right = maps[dlvl][pos.x][pos.y + 1] == type;
+
+    if (up && down && !left && !right)
+        return -1;
+    else if (!up && !down && left && right)
+        return 1;
+    else
+        return 0;
+}
+
 
 /**
  * Return the appropriate glyph (-, | or +) to represent
  * the wall at (level, x, y).
  */
-char select_wall_glyph(int level, Coord pos)
+char select_door_glyph(int dlvl, Coord pos)
 {
-    bool left_wall = false, right_wall = false, up_wall = false,
-            down_wall = false;
-
-    if ((pos.x != 0 && maps[level][pos.x - 1][pos.y] == T_WALL))
-        up_wall = true;
-    if ((pos.x != LEVEL_HEIGHT - 1 && maps[level][pos.x + 1][pos.y] == T_WALL))
-        down_wall = true;
-
-    if ((pos.y != 0 && maps[level][pos.x][pos.y - 1] == T_WALL))
-        left_wall = true;
-    if ((pos.y != LEVEL_WIDTH - 1 && maps[level][pos.x][pos.y + 1] == T_WALL))
-        right_wall = true;
-
-    if (up_wall && down_wall && !left_wall && !right_wall)
-        return '|';
-    if (!up_wall && !down_wall && left_wall && right_wall)
+    switch (get_orientation(dlvl, pos, T_WALL)) {
+    case 1:
         return '-';
-
-    return '+';
+    case -1:
+        return '|';
+    default:
+        return '-';
+    }
 }
 
 
@@ -78,6 +101,8 @@ void display_map()
     attron(COLOR_PAIR(DEFAULT));
     for (i = 0; i < LEVEL_HEIGHT; i++) {
         for (j = 0; j < LEVEL_WIDTH; j++) {
+            char glyph;
+
             if (visibility_map[rodney.dlvl][i][j] == TS_UNDISCOVERED) {
                 mvaddch(i + 1, j, ' ');
                 continue;
@@ -86,8 +111,15 @@ void display_map()
             if (visibility_map[rodney.dlvl][i][j] == TS_SEEN)
                 attron(A_BOLD);
 
-            // TODO: display colors
-            mvaddch(i + 1, j, tile_types[maps[rodney.dlvl][i][j]].sym);
+            attroff(COLOR_PAIR(DEFAULT));
+            attron(COLOR_PAIR(tile_types[maps[rodney.dlvl][i][j]].color));
+            if (maps[rodney.dlvl][i][j] == T_OPEN_DOOR)
+                glyph = select_door_glyph(rodney.dlvl, (Coord) {i, j});
+            else
+                glyph = tile_types[maps[rodney.dlvl][i][j]].sym;
+            mvaddch(i + 1, j, glyph);
+            attroff(COLOR_PAIR(tile_types[maps[rodney.dlvl][i][j]].color));
+            attron(COLOR_PAIR(DEFAULT));
 
             if (visibility_map[rodney.dlvl][i][j] == TS_SEEN)
                 attroff(A_BOLD);
@@ -155,6 +187,7 @@ void clear_msg_line()
 {
     move(0, 0);
     clrtoeol();
+    last_col = -1;
 }
 
 /**
@@ -212,6 +245,7 @@ bool yes_no(char *format, ...)
     char *new_format;
     int rep = 0;
     size_t new_format_len = strlen(format) + strlen(append) + 1;
+    bool result;
 
     new_format = malloc(new_format_len * sizeof(char));
     snprintf(new_format, new_format_len, "%s%s", format, append);
@@ -225,11 +259,17 @@ bool yes_no(char *format, ...)
 
     while (1) {
         rep = get_input();
-        if (rep == 'y' || rep == 'Y')
-            return true;
-        if (rep == 'n' || rep == 'N')
-            return false;
+        if (rep == 'y' || rep == 'Y') {
+            result = true;
+            break;
+        } else if (rep == 'n' || rep == 'N') {
+            result = false;
+            break;
+        }
     }
+
+    clear_msg_line();
+    return result;
 }
 
 
@@ -240,7 +280,7 @@ bool yes_no(char *format, ...)
  */
 bool get_point(Coord *selected)
 {
-    pline("Move cursor with movement keys. Use {.,: } to confirm, ESC to cancel.");
+    pline("Move cursor with movement keys. Use . , : or space to confirm, ESC to cancel.");
     line_needs_confirm = 0;
 
     Coord cur = rodney.pos;
@@ -364,9 +404,9 @@ Object *select_object(LinkedList *objects)
                     selected = cur->element;
                     break;
                 } else
-                    pline("You don't have item %c", selection);
+                    pline("You don't have item %c.", selection);
             } else
-                pline("Invalid command");
+                pline("Invalid command.");
         }
     }
 
@@ -417,7 +457,7 @@ void show_intro()
 
     FILE *intro_file = fopen(INTRO_FILE, "r");
     if (intro_file == NULL) {
-        pline("Could not open intro file");
+        pline("Could not open intro file!");
         return;
     }
 
@@ -432,6 +472,7 @@ void show_intro()
     fclose(intro_file);
 
     get_input();
+    erase();
 }
 
 /**
@@ -452,7 +493,7 @@ void log_layout()
 {
 #ifdef DEBUG
     print_to_log("** Layout\n");
-    for (int i_dlvl = 0; i_dlvl < DLVL_MAX - 1; i_dlvl++) {
+    for (int i_dlvl = 0; i_dlvl < DLVL_MAX; i_dlvl++) {
         print_to_log("%d: %d (flags %d)\n", i_dlvl, dlvl_types[i_dlvl],
                      dlvl_flags[i_dlvl]);
     }

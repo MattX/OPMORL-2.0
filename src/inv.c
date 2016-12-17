@@ -178,7 +178,7 @@ int wield()
         pline("You are now wielding a %s.", object_name(rodney.wielded));
         return 1;
     } else {
-        pline("Never mind.\n");
+        pline("Never mind.");
         return 0;
     }
 }

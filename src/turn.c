@@ -96,12 +96,17 @@ void process_turn(char c)
         turn_elapsed = zap();
         break;
     case 'o':
-        turn_elapsed = open();
+        turn_elapsed = toggle_door((Coord) {0, 0}, true);
         break;
+    case 'c':
+        turn_elapsed = toggle_door((Coord) {0, 0}, false);
+        break;
+#ifdef DEBUG
     case 'G':
         god_mode = !god_mode;
         pline("God mode %s.", god_mode ? "enabled" : "disabled");
         break;
+#endif
     case 'R':
         redrawwin(stdscr);
         break;

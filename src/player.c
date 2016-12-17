@@ -19,6 +19,9 @@ int move_rodney(Coord to)
 {
     Monster *target;
 
+    if (to.x < 0 || to.y < 0 || to.x >= LEVEL_HEIGHT || to.y >= LEVEL_WIDTH)
+        return 0;
+
     if ((target = find_mon_at(rodney.dlvl, to)) != NULL) {
         if (target->flags & MF_INVISIBLE) {
             pline("Wait! There's a %s there!", target->type->name);
@@ -29,32 +32,27 @@ int move_rodney(Coord to)
         }
     }
 
-    if (to.x < 0 || to.y < 0 || to.x >= LEVEL_HEIGHT || to.y >= LEVEL_WIDTH)
-        return 0;
+    if (!IS_WALKABLE(maps[rodney.dlvl][to.x][to.y])) {
+        if (maps[rodney.dlvl][to.x][to.y] == T_CLOSED_DOOR) {
+            return toggle_door(
+                    (Coord) {to.x - rodney.pos.x, to.y - rodney.pos.y}, true);
+        } else if (maps[rodney.dlvl][to.x][to.y] == T_COLLAPSED) {
+            bool confirm = yes_no("The floor has collapsed here, and you can "
+                                          "see the level below. Jump?");
+            if (!confirm) {
+                return 0;
+            }
 
-    if (!IS_WALKABLE(maps[rodney.dlvl][to.x][to.y]))
-        return 0;
+            int dlvl = rodney.dlvl + 1;
+            while (dlvl < DLVL_MAX && maps[dlvl][to.x][to.y] == T_COLLAPSED) {
+                dlvl++;
+            }
 
-    else if (maps[rodney.dlvl][to.x][to.y] == T_COLLAPSED) {
-        bool confirm = yes_no("Jump into the hole?");
-        if (!confirm) {
-            return 0;
-        }
+            pline("You fall through the collapsed floor.");
 
-        int dlvl = rodney.dlvl - 1;
-        while (dlvl < DLVL_MAX && maps[dlvl][to.x][to.y] == T_COLLAPSED) {
-            dlvl++;
-        }
-
-        int found_tile = find_closest(dlvl, &to, false, -1, to);
-        pline("You fall through the collapsed floor...");
-        if (!found_tile) {
-            pline("A mysterious force pulls you back upwards!");
-            return 1;
-        }
-
-        take_damage((rodney.dlvl - dlvl) * 3);
-        rodney.dlvl = dlvl;
+            if (change_dlvl(dlvl, -1))
+                take_damage((rodney.dlvl - dlvl) * 3);
+        } else return 0;
     }
 
     rodney.pos = to;
@@ -66,18 +64,35 @@ int move_rodney(Coord to)
  * Changes the player level.
  * @param to_dlvl The depth level the player should be switched to
  * @param tile_type The tile type on which the player should land. Should be
- * T_STAIRS_UP or T_STAIRS_DOWN.
+ * T_STAIRS_UP or T_STAIRS_DOWN, or -1, in which case the player will land
+ * close to its current position.
  * @return The number of turns the action took
  */
-int change_dlvl_stairs(int to_dlvl, int tile_type)
+int change_dlvl(int to_dlvl, int tile_type)
 {
     Coord new;
+    int found_tile;
 
-    if (!find_tile(to_dlvl, &new, false, tile_type)) {
-        if (find_mon_at(to_dlvl, new))
-            pline("The staircase is blocked by a monster.");
-        else // There is no up staircase on the level below
-            pline("The staircase is blocked by debris from its collapsed roof.");
+    if (to_dlvl < 0 || to_dlvl >= DLVL_MAX) {
+        pline("A mysterious force prevents you from passing");
+        return 0;
+    }
+
+    if (tile_type < 0 || tile_type > NB_TILE_TYPES) {
+        found_tile = find_closest(to_dlvl, &new, false, T_FLOOR, rodney.pos);
+    } else {
+        found_tile = find_tile(to_dlvl, &new, false, tile_type);
+    }
+
+    if (!found_tile) {
+        if (tile_type < 0 || tile_type > NB_TILE_TYPES) {
+            pline("You are kicked back up by a mysterious force.");
+        } else {
+            if (find_mon_at(to_dlvl, new))
+                pline("The staircase is blocked by a monster.");
+            else // There is no up staircase on the level below
+                pline("The staircase is blocked by debris from its collapsed roof.");
+        }
         return 0;
     } else {
         rodney.dlvl = to_dlvl;
@@ -114,9 +129,11 @@ int use_stairs(bool up)
             if (confirm)
                 exit_game();
             else
-                pline("Ok");
+                pline("Ok.");
+
+            return 0;
         } else {
-            return change_dlvl_stairs(rodney.dlvl - 1, T_STAIRS_DOWN);
+            return change_dlvl(rodney.dlvl - 1, T_STAIRS_DOWN);
         }
     } else {
         if (maps[rodney.dlvl][rodney.pos.x][rodney.pos.y] != T_STAIRS_DOWN &&
@@ -124,12 +141,9 @@ int use_stairs(bool up)
             pline("You can't go down here!");
             return 0;
         } else {
-            return change_dlvl_stairs(rodney.dlvl + 1, T_STAIRS_UP);
+            return change_dlvl(rodney.dlvl + 1, T_STAIRS_UP);
         }
     }
-
-    // Should not reach here
-    return 0;
 }
 
 void add_permanent_effect(MixinType mixin)
@@ -291,18 +305,32 @@ int zap()
 
 
 /**
- * Opens a door
+ * Opens or closes a door
  * @return The number of turns the action took
+ * @param direction If not set to (0,0), the direction in which to open a door.
+ * Otherwise, will prompt the player for a direction.
+ * @param open If set to false, will close the door.
  */
-int open()
+int toggle_door(Coord direction, bool open)
 {
-    Coord direction = get_direction();
+    TileType prev, new;
+
+    if (direction.x == 0 && direction.y == 0)
+        direction = get_direction();
     Coord target = coord_add(rodney.pos, direction);
 
-    if (maps[rodney.dlvl][target.x][target.y] == T_OPEN_DOOR) {
-        pline("This door is already open!");
+    if (open) {
+        prev = T_CLOSED_DOOR;
+        new = T_OPEN_DOOR;
+    } else {
+        prev = T_OPEN_DOOR;
+        new = T_CLOSED_DOOR;
+    }
+
+    if (maps[rodney.dlvl][target.x][target.y] == new) {
+        pline("This door is already %s!", open ? "open" : "closed");
         return 0;
-    } else if (maps[rodney.dlvl][target.x][target.y] != T_CLOSED_DOOR) {
+    } else if (maps[rodney.dlvl][target.x][target.y] != prev) {
         pline("You see no door there.");
         return 0;
     }
@@ -310,8 +338,8 @@ int open()
     if (ndn(2, 3) < 4) {
         pline("The door resists.");
     } else {
-        pline("The door opens.");
-        maps[rodney.dlvl][target.x][target.y] = T_OPEN_DOOR;
+        pline("The door %s.", open ? "opens" : "closes");
+        maps[rodney.dlvl][target.x][target.y] = new;
     }
 
     return 1;

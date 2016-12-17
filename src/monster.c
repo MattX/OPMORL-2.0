@@ -296,12 +296,12 @@ bool check_dead(Monster *target, bool rodney_killed)
 }
 
 /*
- * mon_ranged_attack: Have a monster hit the player in ranged mode.
+ * Have a monster hit the player in melee.
  */
-void mon_ranged_attack(Monster *mon)
+void mon_attack_melee(Monster *mon)
 {
     if (ndn(2, 10) > 10 - rodney.ac + mon->type->difficulty) {
-        rodney.hp -= ndn(3, mon->type->power / 3) - 2;
+        take_damage(ndn(3, mon->type->power / 3) - 2);
         pline("The %s hits!", mon->type->name);
     } else {
         pline("The %s misses!", mon->type->name);
@@ -358,7 +358,7 @@ void move_monsters()
         if (dijkstra(rodney.dlvl, mon->pos, target, &new, false) ||
             dijkstra(rodney.dlvl, mon->pos, target, &new, true)) {
             if (new.x == rodney.pos.x && new.y == rodney.pos.y) {
-                mon_ranged_attack(mon);
+                mon_attack_melee(mon);
             } else if (!find_mon_at(rodney.dlvl, new)) {
                 mon->pos = new;
             }
