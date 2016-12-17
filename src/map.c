@@ -18,13 +18,13 @@ struct s_tile_type tile_types[NB_TILE_TYPES] =
         {
                 {false, '#', CLR_DEFAULT},   // wall
                 {true,  '.', CLR_DEFAULT},   // corridor
-                {true,  ' ', CLR_DEFAULT},   // open door (special sym)
+                {true,  '-', CLR_DEFAULT},   // open door (special sym)
                 {false, '+', CLR_DEFAULT},   // closed door
                 {true,  '.', CLR_DEFAULT},   // floor
                 {true,  '<', CLR_DEFAULT},   // stairs down
                 {true,  '>', CLR_DEFAULT},   // stairs up
                 {false, ' ', CLR_DEFAULT},   // ground
-                {false, ' ', CLR_DEFAULT},   // collapsed
+                {false, ',', CLR_YELLOW},    // collapsed
                 {true,  '^', CLR_DEFAULT},   // closed trapdoor
                 {false, '.', CLR_DEFAULT},   // open trapdoor
                 {true,  '/', CLR_DEFAULT},   // lever
@@ -38,6 +38,15 @@ struct s_tile_type tile_types[NB_TILE_TYPES] =
                 {false, '#', CLR_WHITE},     // portcullis down
                 {false, '*', CLR_DEFAULT},   // rubble
         };
+
+
+/** Size of a chasm */
+const int chasm_width = 40;
+const int chasm_height = 15;
+
+/** Size of a rubble area */
+const int rubble_width = 7;
+const int rubble_height = 4;
 
 
 /**
@@ -247,18 +256,18 @@ static bool can_walk(int dlvl, Coord from, Coord to)
  * by the blob.
  * @param height, width Blob size
  * @param blob_pos Upper left coordinates of the blob
- * @param level Level map
+ * @param dlvl Depth level
  * @param from Start point
  * @param to End point
  * @return Whether it is possible to walk between the start and end points.
  */
 static bool can_walk_blob(bool *blob, int height, int width, Coord blob_pos,
-                          TileType (*level)[LEVEL_WIDTH], Coord from, Coord to)
+                          int dlvl, Coord from, Coord to)
 {
     if (blob_pos.x < 0 || blob_pos.y < 0 ||
         blob_pos.x + height >= LEVEL_HEIGHT ||
         blob_pos.y + width >= LEVEL_WIDTH) {
-        print_to_log("WARN: tried to blit blob outside of level");
+        print_to_log("WARN: tried to check blob outside of level");
         return false;
     }
 
@@ -266,8 +275,8 @@ static bool can_walk_blob(bool *blob, int height, int width, Coord blob_pos,
 
     for (int i_x = 0; i_x < LEVEL_HEIGHT; i_x++) {
         for (int i_y = 0; i_y < LEVEL_WIDTH; i_y++) {
-            if ((IS_WALKABLE(level[i_x][i_y]) ||
-                 level[i_x][i_y] == T_CLOSED_DOOR)) {
+            if ((IS_WALKABLE(maps[dlvl][i_x][i_y]) ||
+                 maps[dlvl][i_x][i_y] == T_CLOSED_DOOR)) {
                 mask[i_x * LEVEL_WIDTH + i_y] = true;
             }
         }
@@ -545,16 +554,16 @@ static int count_neighbors(bool *array, int height, int width, int x,
 {
     int count = 0;
 
-    for (int i_x = -1; i_x <= 1; i_x++) {
-        for (int i_y = -1; i_y <= 1; i_y++) {
-            if (i_x == i_y == 0)
+    for (int neighbor_x = -1; neighbor_x <= 1; neighbor_x++) {
+        for (int neighbor_y = -1; neighbor_y <= 1; neighbor_y++) {
+            if (neighbor_x == 0 && neighbor_y == 0)
                 continue;
 
-            int check_x = x + i_x;
+            int check_x = x + neighbor_x;
             if (check_x < 0 || check_x >= height)
                 continue;
 
-            int check_y = y + i_y;
+            int check_y = y + neighbor_y;
             if (check_y < 0 || check_y >= width)
                 continue;
 
@@ -579,7 +588,7 @@ static int count_neighbors(bool *array, int height, int width, int x,
  * @param height, width The dimensions of the array (the shape will be about
  * that size)
  */
-void generate_blob(bool *array, int height, int width)
+static void make_blob(bool *array, int height, int width)
 {
     bool steps[2][height][width];
 
@@ -594,12 +603,23 @@ void generate_blob(bool *array, int height, int width)
         }
     }
 
+    print_to_log("Printing starting blob:\n   ");
+    for (int i_x = 0; i_x < height; i_x++) {
+        for (int i_y = 0; i_y < width; i_y++) {
+            print_to_log("%d", steps[0][i_x][i_y]);
+        }
+        print_to_log("\n   ");
+    }
+    print_to_log("\n");
+
     for (int iteration = 0; iteration < 5; iteration++) {
         parity = !parity;
         for (int i_x = 0; i_x < height; i_x++) {
             for (int i_y = 0; i_y < width; i_y++) {
                 int true_neighbors = count_neighbors((bool *) steps[!parity],
                                                      height, width, i_x, i_y);
+
+                print_to_log("N%d", true_neighbors);
 
                 if (true_neighbors < 4)
                     steps[parity][i_x][i_y] = false;
@@ -611,9 +631,40 @@ void generate_blob(bool *array, int height, int width)
         }
     }
 
+    print_to_log("Printing blob:\n   ");
     for (int i_x = 0; i_x < height; i_x++) {
         for (int i_y = 0; i_y < width; i_y++) {
             array[i_x * width + i_y] = steps[parity][i_x][i_y];
+            print_to_log("%d", array[i_x * width + i_y]);
+        }
+        print_to_log("\n   ");
+    }
+    print_to_log("\n");
+}
+
+
+/**
+ * Adds a blob of some type of tile to the level
+ * @param dlvl Depth level
+ * @param blob Blob array
+ * @param height, width Blob size
+ * @param blob_pos Position of upper left corner of blob
+ * @param tile Tile to replace blob with
+ */
+static void blit_blob(int dlvl, bool *blob, int height, int width,
+                      Coord blob_pos, TileType tile)
+{
+    if (blob_pos.x < 0 || blob_pos.y < 0 ||
+        blob_pos.x + height >= LEVEL_HEIGHT ||
+        blob_pos.y + width >= LEVEL_WIDTH) {
+        print_to_log("WARN: tried to blit blob outside of level");
+        return;
+    }
+
+    for (int i_x = 0; i_x < height; i_x++) {
+        for (int i_y = 0; i_y < width; i_y++) {
+            if (blob[i_x * width + i_y])
+                maps[dlvl][i_x][i_y] = tile;
         }
     }
 }
@@ -861,6 +912,21 @@ void make_layout_from_grid(int dlvl)
                     else
                         level_map[i_x][i_y] = T_CLOSED_DOOR;
                 }
+
+    // Step 7: Add collapsed area
+    bool *blob = calloc((size_t) chasm_height * chasm_width, sizeof(bool));
+    make_blob(blob, chasm_height, chasm_width);
+    for (int attempt = 0; attempt < 5; attempt++) {
+        Coord blob_pos;
+        blob_pos.x = rand_int(0, LEVEL_HEIGHT - chasm_height - 1);
+        blob_pos.y = rand_int(0, LEVEL_WIDTH - chasm_width - 1);
+        if (!has_stair_up || !has_stair_down ||
+            can_walk_blob(blob, chasm_height, chasm_width, blob_pos, dlvl,
+                          stair_down, stair_up)) {
+            blit_blob(dlvl, blob, chasm_height, chasm_width, blob_pos,
+                      T_COLLAPSED);
+        }
+    }
 
     // Step 8: Set visibility map
     for (int i_x = 0; i_x < LEVEL_HEIGHT; i_x++)
