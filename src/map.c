@@ -16,6 +16,7 @@
  */
 struct s_tile_type tile_types[NB_TILE_TYPES] =
         {
+                /* walkable, sym, color */
                 {false, '#', CLR_DEFAULT},   // wall
                 {true,  '.', CLR_DEFAULT},   // corridor
                 {true,  '-', CLR_DEFAULT},   // open door (special sym)
@@ -24,9 +25,9 @@ struct s_tile_type tile_types[NB_TILE_TYPES] =
                 {true,  '<', CLR_DEFAULT},   // stairs down
                 {true,  '>', CLR_DEFAULT},   // stairs up
                 {false, ' ', CLR_DEFAULT},   // ground
-                {false, ',', CLR_YELLOW},    // collapsed
+                {true,  ',', CLR_YELLOW},    // collapsed
                 {true,  '^', CLR_DEFAULT},   // closed trapdoor
-                {false, '.', CLR_DEFAULT},   // open trapdoor
+                {false, '-', CLR_DEFAULT},   // open trapdoor
                 {true,  '/', CLR_DEFAULT},   // lever
                 {false, '=', CLR_YELLOW},    // pipe
                 {false, 'o', CLR_YELLOW},    // pipe exhaust
@@ -50,16 +51,51 @@ const int rubble_height = 4;
 
 
 /**
- * Returns a random walkable tile on the specified map level.
+ * Checks if the coordinates are valid (ie in the map)
+ * @param x, y
+ */
+static bool valid_coordinates(int x, int y)
+{
+    return (x >= 0 && x < LEVEL_HEIGHT && y >= 0 && y < LEVEL_WIDTH);
+}
+
+
+/**
+ * Checks if a given tile fits the following criteria:
+ *  - If tile_type is outside the range [0, NB_TILE_TYPES-1], the tile must
+ *    be walkable
+ *  - Else, the tile must be of the given type
+ *  - If can_have_mon is false, checks that there are no monster on the tile.
+ *
+ * @param dlvl, pos The coordinates of the cell to check
+ * @param can_have_mon Whether the tile can have a monster on it
+ * @param tile_type A tile type to look for
+ */
+static bool fits_criteria(int dlvl, Coord pos, bool can_have_mon, int tile_type)
+{
+    bool looking_for_specific_type =
+            tile_type >= 0 && tile_type < NB_TILE_TYPES;
+
+    if (((!looking_for_specific_type &&
+          IS_WALKABLE(maps[dlvl][pos.x][pos.y])) ||
+         (looking_for_specific_type &&
+          maps[dlvl][pos.x][pos.y] == tile_type)) &&
+        (!can_have_mon || find_mon_at(dlvl, pos) == NULL)) {
+        return true;
+    }
+    return false;
+}
+
+/**
+ * Returns a random walkable tile on the specified map level, fitting given
+ * criteria.
  * @dlvl the dungeon level on which to perform the search
- * @param coords pointers where the location of a tile will be stored, if one
- * was found.
- * @param can_have_mon if this flag is set to false, the returned tile will not
- * have a monster on it.
+ * @param coords pointer where the location of a tile will be stored.
+ * @param can_have_mon if false, the tile will not have a monster on it.
  * @param tile_type if set in the range [0, NB_TILE_TYPES-1], will only look
  * for tiles of that type. The tile type doesn't have to be walkable. Otherwise,
  * will return a random *walkable* tile.
- * @returns the number of available tiles satisfying the constraints.
+ * @returns the number of available tiles satisfying the constraints. Can be 0.
  */
 int
 find_tile(int dlvl, Coord *coords, bool can_have_mon, int tile_type)
@@ -67,24 +103,16 @@ find_tile(int dlvl, Coord *coords, bool can_have_mon, int tile_type)
     bool avail[LEVEL_HEIGHT][LEVEL_WIDTH];
     int nb_avail = 0;
     int i_selected;
-    bool looking_for_specific_type =
-            tile_type >= 0 && tile_type < NB_TILE_TYPES;
 
     for (int i_x = 0; i_x < LEVEL_HEIGHT; i_x++) {
         for (int i_y = 0; i_y < LEVEL_WIDTH; i_y++) {
-            if ((!looking_for_specific_type &&
-                 IS_WALKABLE(maps[dlvl][i_x][i_y]))
-                || (looking_for_specific_type &&
-                    maps[dlvl][i_x][i_y] == tile_type)) {
-                if (!can_have_mon &&
-                    find_mon_at(dlvl, (Coord) {i_x, i_y}) != NULL)
-                    avail[i_x][i_y] = false;
-                else {
-                    avail[i_x][i_y] = true;
-                    nb_avail++;
-                }
-            } else
+            if (fits_criteria(dlvl, (Coord) {i_x, i_y}, can_have_mon,
+                              tile_type)) {
+                avail[i_x][i_y] = true;
+                nb_avail++;
+            } else {
                 avail[i_x][i_y] = false;
+            }
         }
     }
 
@@ -107,6 +135,39 @@ find_tile(int dlvl, Coord *coords, bool can_have_mon, int tile_type)
 
     // Should not reach here
     return 0;
+}
+
+
+/**
+ * Finds the closest (walkable) tile to a specified tile.
+ * @param dlvl The depth level to search on
+ * @param coords A pointer to a Coord struct where the coordinates will be
+ * stored
+ * @param can_have_mon Whether the tile can have a monster on it
+ * @param tile_type If in [0, NB_TILE_TYPES-1], specifies a tile type
+ * @param near The coordinates around which we look
+ * @return Whether a tile was found.
+ */
+bool find_closest(int dlvl, Coord *coords, bool can_have_mon, int tile_type,
+                  Coord near)
+{
+    for (int radius = 0; radius < LEVEL_WIDTH; radius++) {
+        for (int i_x = near.x - radius; i_x <= near.x + radius; i_x++) {
+            for (int i_y = near.y - radius; i_y <= near.y + radius; i_y++) {
+                if (i_x != near.x - radius && i_x != near.x + radius &&
+                    i_y != near.y - radius && i_y != near.y + radius)
+                    continue;
+                if (fits_criteria(dlvl, (Coord) {i_x, i_y}, can_have_mon,
+                                  tile_type)) {
+                    coords->x = i_x;
+                    coords->y = i_y;
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
 }
 
 
@@ -191,24 +252,30 @@ static bool can_walk_mask(bool *mask, int width, Coord from, Coord to)
 
     stack[0] = from;
 
+    print_to_log("Printing mask:\n   ");
+    for (int i_x = 0; i_x < LEVEL_HEIGHT; i_x++) {
+        for (int i_y = 0; i_y < LEVEL_WIDTH; i_y++) {
+            print_to_log("%d", mask[i_x * width + i_y]);
+        }
+        print_to_log("\n   ");
+    }
+    print_to_log("\n");
+
     while (stack_pointer >= 0) {
         Coord cur = stack[stack_pointer];
         stack_pointer--;
-        checked[cur.x][cur.y] = true;
 
         if (cur.x == to.x && cur.y == to.y)
             return true;
 
         for (int x = cur.x - 1; x <= cur.x + 1; x++) {
-            if (x < 0 || x >= LEVEL_HEIGHT)
-                continue;
             for (int y = cur.y - 1; y <= cur.y + 1; y++) {
-                if (y < 0 || y >= LEVEL_WIDTH)
+                if (!valid_coordinates(x, y))
                     continue;
                 if (mask[x * width + y] && !checked[x][y]) {
                     stack_pointer++;
-                    stack[stack_pointer].x = x;
-                    stack[stack_pointer].y = y;
+                    stack[stack_pointer] = (Coord) {x, y};
+                    checked[x][y] = true;
                 }
             }
         }
@@ -267,7 +334,7 @@ static bool can_walk_blob(bool *blob, int height, int width, Coord blob_pos,
     if (blob_pos.x < 0 || blob_pos.y < 0 ||
         blob_pos.x + height >= LEVEL_HEIGHT ||
         blob_pos.y + width >= LEVEL_WIDTH) {
-        print_to_log("WARN: tried to check blob outside of level");
+        print_to_log("WARN: tried to check blob outside of level.\n");
         return false;
     }
 
@@ -603,15 +670,6 @@ static void make_blob(bool *array, int height, int width)
         }
     }
 
-    print_to_log("Printing starting blob:\n   ");
-    for (int i_x = 0; i_x < height; i_x++) {
-        for (int i_y = 0; i_y < width; i_y++) {
-            print_to_log("%d", steps[0][i_x][i_y]);
-        }
-        print_to_log("\n   ");
-    }
-    print_to_log("\n");
-
     for (int iteration = 0; iteration < 5; iteration++) {
         parity = !parity;
         for (int i_x = 0; i_x < height; i_x++) {
@@ -631,15 +689,11 @@ static void make_blob(bool *array, int height, int width)
         }
     }
 
-    print_to_log("Printing blob:\n   ");
     for (int i_x = 0; i_x < height; i_x++) {
         for (int i_y = 0; i_y < width; i_y++) {
             array[i_x * width + i_y] = steps[parity][i_x][i_y];
-            print_to_log("%d", array[i_x * width + i_y]);
         }
-        print_to_log("\n   ");
     }
-    print_to_log("\n");
 }
 
 
@@ -657,14 +711,14 @@ static void blit_blob(int dlvl, bool *blob, int height, int width,
     if (blob_pos.x < 0 || blob_pos.y < 0 ||
         blob_pos.x + height >= LEVEL_HEIGHT ||
         blob_pos.y + width >= LEVEL_WIDTH) {
-        print_to_log("WARN: tried to blit blob outside of level");
+        print_to_log("WARN: tried to blit blob outside of level.\n");
         return;
     }
 
     for (int i_x = 0; i_x < height; i_x++) {
         for (int i_y = 0; i_y < width; i_y++) {
             if (blob[i_x * width + i_y])
-                maps[dlvl][i_x][i_y] = tile;
+                maps[dlvl][i_x + blob_pos.x][i_y + blob_pos.y] = tile;
         }
     }
 }
@@ -886,7 +940,22 @@ void make_layout_from_grid(int dlvl)
         }
     }
 
-    if (!find_tile(dlvl, &stair_up, 1, -1)) {
+    int result;
+
+    if (dlvl == 0) {
+        result = find_tile(dlvl, &stair_up, 1, -1);
+    } else {
+        Coord previous_stairs;
+        int found_previous_stairs = find_tile(dlvl - 1, &previous_stairs, 1,
+                                              T_STAIRS_DOWN);
+        if (!found_previous_stairs) {
+            result = find_tile(dlvl, &stair_up, 1, -1);
+        } else {
+            result = find_closest(dlvl, &stair_up, 1, -1, previous_stairs);
+        }
+    }
+
+    if (!result) {
         print_to_log("Could not place stairs up on dlvl %d!\n", dlvl);
     } else {
         maps[dlvl][stair_up.x][stair_up.y] = T_STAIRS_UP;
@@ -914,17 +983,19 @@ void make_layout_from_grid(int dlvl)
                 }
 
     // Step 7: Add collapsed area
-    bool *blob = calloc((size_t) chasm_height * chasm_width, sizeof(bool));
-    make_blob(blob, chasm_height, chasm_width);
-    for (int attempt = 0; attempt < 5; attempt++) {
-        Coord blob_pos;
-        blob_pos.x = rand_int(0, LEVEL_HEIGHT - chasm_height - 1);
-        blob_pos.y = rand_int(0, LEVEL_WIDTH - chasm_width - 1);
-        if (!has_stair_up || !has_stair_down ||
-            can_walk_blob(blob, chasm_height, chasm_width, blob_pos, dlvl,
-                          stair_down, stair_up)) {
-            blit_blob(dlvl, blob, chasm_height, chasm_width, blob_pos,
-                      T_COLLAPSED);
+    if (dlvl != DLVL_MAX - 1 && rand_int(1, 100) <= 40) {
+        bool *blob = calloc((size_t) chasm_height * chasm_width, sizeof(bool));
+        make_blob(blob, chasm_height, chasm_width);
+        for (int attempt = 0; attempt < 5; attempt++) {
+            Coord blob_pos;
+            blob_pos.x = rand_int(0, LEVEL_HEIGHT - chasm_height - 1);
+            blob_pos.y = rand_int(0, LEVEL_WIDTH - chasm_width - 1);
+            if (!has_stair_up || !has_stair_down ||
+                can_walk_blob(blob, chasm_height, chasm_width, blob_pos, dlvl,
+                              stair_down, stair_up)) {
+                blit_blob(dlvl, blob, chasm_height, chasm_width, blob_pos,
+                          T_COLLAPSED);
+            }
         }
     }
 

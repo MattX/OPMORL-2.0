@@ -35,6 +35,28 @@ int move_rodney(Coord to)
     if (!IS_WALKABLE(maps[rodney.dlvl][to.x][to.y]))
         return 0;
 
+    else if (maps[rodney.dlvl][to.x][to.y] == T_COLLAPSED) {
+        bool confirm = yes_no("Jump into the hole?");
+        if (!confirm) {
+            return 0;
+        }
+
+        int dlvl = rodney.dlvl - 1;
+        while (dlvl < DLVL_MAX && maps[dlvl][to.x][to.y] == T_COLLAPSED) {
+            dlvl++;
+        }
+
+        int found_tile = find_closest(dlvl, &to, false, -1, to);
+        pline("You fall through the collapsed floor...");
+        if (!found_tile) {
+            pline("A mysterious force pulls you back upwards!");
+            return 1;
+        }
+
+        take_damage((rodney.dlvl - dlvl) * 3);
+        rodney.dlvl = dlvl;
+    }
+
     rodney.pos = to;
     return 1;
 }
@@ -79,7 +101,8 @@ int change_dlvl_stairs(int to_dlvl, int tile_type)
 int use_stairs(bool up)
 {
     if (up) {
-        if (maps[rodney.dlvl][rodney.pos.x][rodney.pos.y] != T_STAIRS_UP) {
+        if (maps[rodney.dlvl][rodney.pos.x][rodney.pos.y] != T_STAIRS_UP &&
+            !god_mode) {
             pline("You can't go up here!");
             return 0;
         }
@@ -96,7 +119,8 @@ int use_stairs(bool up)
             return change_dlvl_stairs(rodney.dlvl - 1, T_STAIRS_DOWN);
         }
     } else {
-        if (maps[rodney.dlvl][rodney.pos.x][rodney.pos.y] != T_STAIRS_DOWN) {
+        if (maps[rodney.dlvl][rodney.pos.x][rodney.pos.y] != T_STAIRS_DOWN &&
+            !god_mode) {
             pline("You can't go down here!");
             return 0;
         } else {

@@ -556,6 +556,11 @@ void layout_dungeon();
 
 void log_layout();
 
+bool find_closest(int dlvl, Coord *coords, bool can_have_mon, int tile_type,
+                  Coord near);
+
+void take_damage(int damage);
+
 /* Globals */
 
 enum e_dungeon_level_type dlvl_types[DLVL_MAX];
