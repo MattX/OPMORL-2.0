@@ -7,6 +7,7 @@
  *
  */
 
+#include <unistd.h>
 #include "opmorl.h"
 
 
@@ -49,11 +50,16 @@ const int chasm_height = 15;
 const int patch_width = 7;
 const int patch_height = 4;
 
+/** Percent chance that a door will be generated open */
+const int open_door_chance = 15;
+/** Percent chance that a portcullis will be generated, if possible */
+const int portcullis_chance = 10;
+
 
 /**
  * Checks if the coordinates are valid (ie in the map)
  */
-static bool valid_coordinates(int x, int y)
+bool valid_coordinates(int x, int y)
 {
     return (x >= 0 && x < LEVEL_HEIGHT && y >= 0 && y < LEVEL_WIDTH);
 }
@@ -86,6 +92,58 @@ Coord get_neighbor(Coord around, int n)
 
 
 /**
+ * Returns the orientation of a tile type at a given coordinate. This is made
+ * to recognize the following situations (assuming type == wall)
+ *
+ *     ...          .#.        .#.  .#.
+ *     #X#          .X.        .X.  .X#
+ *     ...          .#.        ...  .#.
+ *  Horizontal    Vertical       None
+ *
+ * @param dlvl
+ * @param pos
+ * @param type
+ * @return 1 for horizontal, -1 for vertical, 0 for none
+ */
+int get_orientation(int dlvl, Coord pos, TileType type)
+{
+    // There is no orientation at the edge of the map
+    if (pos.x == 0 || pos.x == LEVEL_HEIGHT - 1 || pos.y == 0
+        || pos.y == LEVEL_WIDTH - 1)
+        return 0;
+
+    bool up = maps[dlvl][pos.x - 1][pos.y] == type;
+    bool down = maps[dlvl][pos.x + 1][pos.y] == type;
+    bool left = maps[dlvl][pos.x][pos.y - 1] == type;
+    bool right = maps[dlvl][pos.x][pos.y + 1] == type;
+
+    if (up && down && !left && !right)
+        return -1;
+    else if (!up && !down && left && right)
+        return 1;
+    else
+        return 0;
+}
+
+
+/**
+ * Registers a connection between a lever and a target
+ * @param dlvl, pos The position of the lever
+ * @param target_dvl, target_pos The position of the target
+ */
+static void register_lever(int dlvl, Coord pos, int target_dlvl, Coord target)
+{
+    LeverConnection *connection = malloc(sizeof(LeverConnection));
+    connection->dlvl = dlvl;
+    connection->pos = pos;
+    connection->target_dlvl = target_dlvl;
+    connection->target_pos = target;
+
+    add_to_linked_list(lever_connections, connection);
+}
+
+
+/**
  * Checks if a given tile fits the following criteria:
  *  - If tile_type is outside the range [0, NB_TILE_TYPES-1], the tile must
  *    be walkable
@@ -113,33 +171,22 @@ static bool fits_criteria(int dlvl, Coord pos, bool can_have_mon, int tile_type)
     return false;
 }
 
+
 /**
- * Returns a random walkable tile on the specified map level, fitting given
- * criteria.
- * @param dlvl the dungeon level on which to perform the search
- * @param coords pointer where the location of a tile will be stored.
- * @param can_have_mon if false, the tile will not have a monster on it.
- * @param tile_type if set in the range [0, NB_TILE_TYPES-1], will only look
- * for tiles of that type. The tile type doesn't have to be walkable. Otherwise,
- * will return a random *walkable* tile.
- * @returns the number of available tiles satisfying the constraints. Can be 0.
+ * Finds a random true tile in a mask.
+ * @param coords Pointer where the location of a tile will be stored.
+ * @param mask A LEVEL_HEIGHT*LEVEL_WIDTH array of boolean values.
+ * @return The number of true tiles. Can be 0.
  */
-int
-find_tile(int dlvl, Coord *coords, bool can_have_mon, int tile_type)
+static int find_tile_mask(Coord *coords, bool *mask)
 {
-    bool avail[LEVEL_HEIGHT][LEVEL_WIDTH];
     int nb_avail = 0;
     int i_selected;
 
     for (int i_x = 0; i_x < LEVEL_HEIGHT; i_x++) {
         for (int i_y = 0; i_y < LEVEL_WIDTH; i_y++) {
-            if (fits_criteria(dlvl, (Coord) {i_x, i_y}, can_have_mon,
-                              tile_type)) {
-                avail[i_x][i_y] = true;
+            if (mask[i_x * LEVEL_WIDTH + i_y])
                 nb_avail++;
-            } else {
-                avail[i_x][i_y] = false;
-            }
         }
     }
 
@@ -149,7 +196,7 @@ find_tile(int dlvl, Coord *coords, bool can_have_mon, int tile_type)
     i_selected = rand_int(0, nb_avail - 1);
     for (int i_x = 0; i_x < LEVEL_HEIGHT; i_x++) {
         for (int i_y = 0; i_y < LEVEL_WIDTH; i_y++) {
-            if (avail[i_x][i_y]) {
+            if (mask[i_x * LEVEL_WIDTH + i_y]) {
                 if (i_selected == 0) {
                     coords->x = i_x;
                     coords->y = i_y;
@@ -161,7 +208,43 @@ find_tile(int dlvl, Coord *coords, bool can_have_mon, int tile_type)
     }
 
     // Should not reach here
+    print_to_log("Something's gone wrong in find_tile_mask().\n");
     return 0;
+}
+
+
+/**
+ * Returns a random walkable tile on the specified map level, fitting given
+ * criteria.
+ * @param coords Pointer where the location of a tile will be stored.
+ * @param dlvl The dungeon level on which to perform the search
+ * @param can_have_mon If false, the tile will not have a monster on it.
+ * @param tile_type If set in the range [0, NB_TILE_TYPES-1], will only look
+ * for tiles of that type. The tile type doesn't have to be walkable. Otherwise,
+ * will return a random *walkable* tile.
+ * @returns The number of available tiles satisfying the constraints. Can be 0.
+ */
+int
+find_tile(Coord *coords, int dlvl, bool can_have_mon, int tile_type)
+{
+    bool *mask = malloc(LEVEL_HEIGHT * LEVEL_WIDTH * sizeof(bool));
+
+    for (int i_x = 0; i_x < LEVEL_HEIGHT; i_x++) {
+        for (int i_y = 0; i_y < LEVEL_WIDTH; i_y++) {
+            if (fits_criteria(dlvl, (Coord) {i_x, i_y}, can_have_mon,
+                              tile_type)) {
+                mask[i_x * LEVEL_WIDTH + i_y] = true;
+            } else {
+                mask[i_x * LEVEL_WIDTH + i_y] = false;
+            }
+        }
+    }
+
+    int nb_avail = find_tile_mask(coords, mask);
+
+    free(mask);
+
+    return nb_avail;
 }
 
 
@@ -277,6 +360,10 @@ static bool can_walk_mask(bool *mask, int width, Coord from, Coord to)
 
     memset(checked, false, LEVEL_HEIGHT * LEVEL_WIDTH);
 
+    if (!mask[from.x * width + from.y]) {
+        return false;
+    }
+
     stack[0] = from;
 
     while (stack_pointer >= 0) {
@@ -319,7 +406,7 @@ static bool can_walk(int dlvl, Coord from, Coord to)
     for (int i_x = 0; i_x < LEVEL_HEIGHT; i_x++) {
         for (int i_y = 0; i_y < LEVEL_WIDTH; i_y++) {
             if (IS_WALKABLE(maps[dlvl][i_x][i_y]) ||
-                maps[dlvl][i_x][i_y] == T_CLOSED_DOOR) {
+                maps[dlvl][i_x][i_y] == T_DOOR_CLOSED) {
                 mask[i_x * LEVEL_WIDTH + i_y] = true;
             }
         }
@@ -360,7 +447,7 @@ static bool can_walk_blob(bool *blob, int height, int width, Coord blob_pos,
     for (int i_x = 0; i_x < LEVEL_HEIGHT; i_x++) {
         for (int i_y = 0; i_y < LEVEL_WIDTH; i_y++) {
             if ((IS_WALKABLE(maps[dlvl][i_x][i_y]) ||
-                 maps[dlvl][i_x][i_y] == T_CLOSED_DOOR)) {
+                 maps[dlvl][i_x][i_y] == T_DOOR_CLOSED)) {
                 mask[i_x * LEVEL_WIDTH + i_y] = true;
             }
         }
@@ -628,27 +715,19 @@ void layout_dungeon()
  * @param x, y The coordinates of the cell to check
  * @return The number of neighbors of that cell that are set to true.
  */
-static int count_neighbors(bool *array, int height, int width, int x,
-                           int y)
+static int count_neighbors(bool *array, int height, int width, Coord cell)
 {
     int count = 0;
 
-    for (int neighbor_x = -1; neighbor_x <= 1; neighbor_x++) {
-        for (int neighbor_y = -1; neighbor_y <= 1; neighbor_y++) {
-            if (neighbor_x == 0 && neighbor_y == 0)
-                continue;
+    for (int i_neighbor = 0; i_neighbor < 8; i_neighbor++) {
+        Coord neighbor = get_neighbor(cell, i_neighbor);
 
-            int check_x = x + neighbor_x;
-            if (check_x < 0 || check_x >= height)
-                continue;
+        if (neighbor.x < 0 || neighbor.x >= height || neighbor.y < 0 ||
+            neighbor.y >= width)
+            continue;
 
-            int check_y = y + neighbor_y;
-            if (check_y < 0 || check_y >= width)
-                continue;
-
-            if (array[check_x * width + check_y])
-                count++;
-        }
+        if (array[neighbor.x * width + neighbor.y])
+            count++;
     }
 
     return count;
@@ -687,7 +766,8 @@ static void make_blob(bool *array, int height, int width)
         for (int i_x = 0; i_x < height; i_x++) {
             for (int i_y = 0; i_y < width; i_y++) {
                 int true_neighbors = count_neighbors((bool *) steps[!parity],
-                                                     height, width, i_x, i_y);
+                                                     height, width,
+                                                     (Coord) {i_x, i_y});
 
                 if (true_neighbors < 4)
                     steps[parity][i_x][i_y] = false;
@@ -803,8 +883,8 @@ bool load_grid()
  * @param from_x, from_y The coordinates from which to start the replacement
  * @param to_type The new tile type
  */
-void replace_tiles_from(TileType (*level)[LEVEL_WIDTH], Coord from,
-                        int source_type, TileType to_type)
+static void replace_tiles_from(TileType (*level)[LEVEL_WIDTH], Coord from,
+                               int source_type, TileType to_type)
 {
     if (grid[from.x][from.y] != source_type || level[from.x][from.y] == to_type)
         return;
@@ -864,11 +944,17 @@ static bool can_place_door(TileType (*level)[LEVEL_WIDTH], Coord pos)
         || pos.y == LEVEL_WIDTH - 1)
         return false;
 
+    // We should be overwriting a boring block
+    TileType tile = level[pos.x][pos.y];
+    if (tile != T_FLOOR && tile != T_WALL && tile != T_GROUND &&
+        tile != T_CORRIDOR)
+        return false;
+
     // We shouldn't be touching another door
     for (int i_x = pos.x - 1; i_x <= pos.x + 1; i_x++)
         for (int i_y = pos.y - 1; i_y <= pos.y + 1; i_y++)
-            if (level[i_x][i_y] == T_OPEN_DOOR ||
-                level[i_x][i_y] == T_CLOSED_DOOR)
+            if (level[i_x][i_y] == T_DOOR_OPEN ||
+                level[i_x][i_y] == T_DOOR_CLOSED)
                 return false;
 
     // There should be a direction where the path is walled, and another
@@ -880,6 +966,230 @@ static bool can_place_door(TileType (*level)[LEVEL_WIDTH], Coord pos)
 
     return (!up_walk && !down_walk && left_walk && right_walk) ||
            (up_walk && down_walk && !left_walk && !right_walk);
+}
+
+
+/**
+ * Marks all areas accessible from a point and not yet marked with a specific
+ * value.
+ * @param map The map to mark
+ * @param starting_pos Starting point
+ * @param value Value to mark with
+ * @warning This function will not traverse any points that are already marked
+ * with the given value.
+ */
+static void flood(int dlvl, int *map, Coord starting_pos, int value)
+{
+    map[starting_pos.x * LEVEL_WIDTH + starting_pos.y] = value;
+
+    for (int i_neighbor = 0; i_neighbor < 8; i_neighbor++) {
+        Coord neighbor = get_neighbor(starting_pos, i_neighbor);
+        if (valid_coordinates(neighbor.x, neighbor.y) &&
+            POTENTIALLY_WALKABLE(maps[dlvl][neighbor.x][neighbor.y]) &&
+            map[neighbor.x * LEVEL_WIDTH + neighbor.y] != value)
+            flood(dlvl, map, neighbor, value);
+    }
+}
+
+
+/**
+ * Find connected components in the map
+ * @param dlvl The level in which to find components
+ * @param components An allocated array of size LEVEL_HEIGHT*LEVEL_WIDTH in
+ * which the component map will be stored
+ * @return the number of components
+ */
+static int find_connected_components(int dlvl, int *components)
+{
+    int i_component = 0;
+
+    for (int i = 0; i < LEVEL_HEIGHT * LEVEL_WIDTH; i++)
+        components[i] = -1;
+
+    for (int i_x = 0; i_x < LEVEL_HEIGHT; i_x++) {
+        for (int i_y = 0; i_y < LEVEL_WIDTH; i_y++) {
+            if (POTENTIALLY_WALKABLE(maps[dlvl][i_x][i_y]) &&
+                components[i_x * LEVEL_WIDTH + i_y] == -1) {
+                // Walkable and not yet part of any connected component, run
+                // flood algorithm
+                flood(dlvl, components, (Coord) {i_x, i_y}, i_component);
+                i_component++;
+            }
+        }
+    }
+
+    return i_component;
+}
+
+
+/**
+ * Checks if removing a tile would connect two components sideways (not
+ * diagonally).
+ * @param components_map The components map, as generated by
+ * `find_connected_components`.
+ * @param pos The position of the tile to check
+ * @param component If set to a >= 0 value, will only return true if the tile
+ * connects this component on one side.
+ */
+static bool separates_components(int *components_map, Coord pos, int component)
+{
+    int first_component = -1;
+
+    // Only check the first 4 neighbors, i.e the sides
+    for (int i_neighbor = 0; i_neighbor < 4; i_neighbor++) {
+        Coord neighbor = get_neighbor(pos, i_neighbor);
+        if (!valid_coordinates(neighbor.x, neighbor.y))
+            continue;
+
+        int val = components_map[neighbor.x * LEVEL_WIDTH + neighbor.y];
+        if (val != -1) {
+            if (first_component == -1)
+                first_component = val;
+            else if (val != first_component) {
+                if (component < 0)
+                    return true;
+                return first_component == component || val == component;
+            }
+        }
+    }
+
+    return false;
+}
+
+
+/**
+ * Replaces a wall with a door (or a portcullis if possible).
+ * @param dlvl The level on which to perform the replacement.
+ * @param pos The coordinates of the door (or center of the portcullis).
+ */
+static void open_wall(int dlvl, Coord pos)
+{
+    /* Note here: if we're on a maintenance level and there are pipes, the
+     * orientation will never be predicted correctly. But who installs a
+     * portcullis in piping ? */
+    int orientation = get_orientation(dlvl, pos, T_WALL);
+
+    if (orientation == 0 || rand_int(1, 100) > portcullis_chance) {
+        if (rand_int(1, 100) <= open_door_chance) {
+            maps[dlvl][pos.x][pos.y] = T_DOOR_OPEN;
+        } else {
+            maps[dlvl][pos.x][pos.y] = T_DOOR_CLOSED;
+        }
+    }
+
+    Coord increment_direction, decrement_direction;
+
+    if (orientation == 1) { // Horizontal
+        increment_direction = (Coord) {0, 1};
+        decrement_direction = (Coord) {0, -1};
+    } else {
+        increment_direction = (Coord) {1, 0};
+        decrement_direction = (Coord) {-1, 0};
+    }
+
+    Coord incremented = coord_add(pos, increment_direction);
+    Coord decremented = coord_add(pos, decrement_direction);
+
+    if (valid_coordinates(incremented.x, incremented.y) &&
+        can_place_door(maps[dlvl], incremented) &&
+        valid_coordinates(decremented.x, decremented.y) &&
+        can_place_door(maps[dlvl], decremented)) {
+        maps[dlvl][incremented.x][incremented.y] = T_PORTCULLIS_DOWN;
+        maps[dlvl][pos.x][pos.y] = T_PORTCULLIS_DOWN;
+        maps[dlvl][decremented.x][decremented.y] = T_PORTCULLIS_DOWN;
+
+        // Place a lever to be accessible from the stairs down
+        int *components = malloc(LEVEL_HEIGHT * LEVEL_WIDTH * sizeof(int));
+        bool *mask = malloc(LEVEL_HEIGHT * LEVEL_WIDTH * sizeof(bool));
+
+        find_connected_components(dlvl, components);
+        Coord stairs_up;
+        int found_stairs = find_tile(&stairs_up, dlvl, true, T_STAIRS_UP);
+        int main_component;
+
+        if (found_stairs)
+            main_component = components[stairs_up.x * LEVEL_WIDTH +
+                                        stairs_up.y];
+        else
+            main_component = 0;
+
+        for (int i = 0; i < LEVEL_HEIGHT * LEVEL_WIDTH; i++)
+            mask[i] = (components[i] == main_component);
+
+        Coord lever;
+        find_tile_mask(&lever, mask);
+
+        maps[dlvl][lever.x][lever.y] = T_LEVER;
+        register_lever(dlvl, lever, dlvl, pos);
+
+        free(components);
+        free(mask);
+    }
+}
+
+/**
+ * Maybe connects components.
+ * @param dlvl
+ * @param components
+ */
+static void connect_components(int dlvl)
+{
+    int *components = malloc(LEVEL_HEIGHT * LEVEL_WIDTH * sizeof(int));
+    int connects[LEVEL_HEIGHT][LEVEL_WIDTH];
+
+    int max_attempts = ndn(2, find_connected_components(dlvl, components) / 2);
+    Coord stairs_up;
+    int found_stairs = find_tile(&stairs_up, dlvl, true, T_STAIRS_UP);
+
+    int main_component;
+    if (found_stairs)
+        main_component = components[stairs_up.x * LEVEL_WIDTH + stairs_up.y];
+    else
+        main_component = 0;
+
+    for (int attempt = 0; attempt < max_attempts; attempt++) {
+        int possibles = 0;
+        for (int i_x = 0; i_x < LEVEL_HEIGHT; i_x++) {
+            for (int i_y = 0; i_y < LEVEL_WIDTH; i_y++) {
+                connects[i_x][i_y] = separates_components(components,
+                                                          (Coord) {i_x, i_y},
+                                                          main_component);
+                if (connects[i_x][i_y])
+                    possibles++;
+            }
+        }
+
+        if (possibles == 0)
+            break;
+
+        int selected = rand_int(0, possibles - 1);
+        Coord pos = (Coord) {0, 0};
+        bool found = false;
+
+        for (int i_x = 0; i_x < LEVEL_HEIGHT && !found; i_x++) {
+            for (int i_y = 0; i_y < LEVEL_WIDTH && !found; i_y++) {
+                if (connects[i_x][i_y]) {
+                    if (selected == 0) {
+                        pos.x = i_x;
+                        pos.y = i_y;
+                        found = true;
+                    }
+                    selected--;
+                }
+            }
+        }
+
+        if (!found) {
+            print_to_log("Something went wrong in connect_components().\n");
+            break;
+        }
+
+        open_wall(dlvl, pos);
+        // Update components map
+        find_connected_components(dlvl, components);
+    }
+
+    free(components);
 }
 
 
@@ -909,9 +1219,9 @@ static bool select_valid_rectangle(int dlvl, int height, int width, Coord *pos)
 {
     // TODO: write this in a smart way :)
     Coord stairs_up, stairs_down;
-    int has_stairs_up = find_tile(dlvl, &stairs_up, true, T_STAIRS_UP) > 0;
+    int has_stairs_up = find_tile(&stairs_up, dlvl, true, T_STAIRS_UP) > 0;
     int has_stairs_down =
-            find_tile(dlvl, &stairs_down, true, T_STAIRS_DOWN) > 0;
+            find_tile(&stairs_down, dlvl, true, T_STAIRS_DOWN) > 0;
 
     for (int attempt = 0; attempt < 100; attempt++) {
         pos->x = rand_int(1, LEVEL_HEIGHT - height - 2);
@@ -942,6 +1252,11 @@ static void make_administator(int dlvl)
         return;
     }
 
+    // Clear it out
+    for (int i_x = 0; i_x <= size_x; i_x++)
+        for (int i_y = 0; i_y <= size_y; i_y++)
+            maps[dlvl][room_pos.x + i_x][room_pos.y + i_y] = T_FLOOR;
+
     // Make collapsed area
     for (int i_x = 0; i_x <= size_x; i_x++)
         for (int i_y = 0; i_y <= size_y; i_y++)
@@ -958,7 +1273,18 @@ static void make_administator(int dlvl)
     int door_pos = rand_int(0, size_x - 5);
     int offset = rand_int(0, 1) * (size_y - 2);
     maps[dlvl][room_pos.x + 3 + door_pos][room_pos.y + 1 + offset] =
-            T_CLOSED_DOOR;
+            T_DOOR_CLOSED;
+
+    // Add a lever on a walkable tile
+    Coord lever_position;
+    for (int attempts = 0; attempts < 100; attempts++) {
+        lever_position.x = room_pos.x + rand_int(3, size_x - 3);
+        lever_position.y = room_pos.y + rand_int(3, size_y - 3);
+        if (maps[dlvl][lever_position.x][lever_position.y] == T_FLOOR) {
+            maps[dlvl][lever_position.x][lever_position.y] = T_LEVER;
+            break;
+        }
+    }
 }
 
 
@@ -1036,7 +1362,7 @@ void generate_level(int dlvl)
     bool has_stair_down = false, has_stair_up = false;
 
     if (dlvl != DLVL_MAX - 1) {
-        if (!find_tile(dlvl, &stair_down, 1, -1)) {
+        if (!find_tile(&stair_down, dlvl, 1, -1)) {
             print_to_log("Could not place stairs down on dlvl %d!\n", dlvl);
         } else {
             maps[dlvl][stair_down.x][stair_down.y] = T_STAIRS_DOWN;
@@ -1047,13 +1373,13 @@ void generate_level(int dlvl)
     int result;
 
     if (dlvl == 0) {
-        result = find_tile(dlvl, &stair_up, 1, -1);
+        result = find_tile(&stair_up, dlvl, 1, -1);
     } else {
         Coord previous_stairs;
-        int found_previous_stairs = find_tile(dlvl - 1, &previous_stairs, 1,
+        int found_previous_stairs = find_tile(&previous_stairs, dlvl - 1, 1,
                                               T_STAIRS_DOWN);
         if (!found_previous_stairs) {
-            result = find_tile(dlvl, &stair_up, 1, -1);
+            result = find_tile(&stair_up, dlvl, 1, -1);
         } else {
             result = find_closest(dlvl, &stair_up, 1, -1, previous_stairs);
         }
@@ -1066,6 +1392,9 @@ void generate_level(int dlvl)
         has_stair_up = true;
     }
 
+    // Connect some components
+    connect_components(dlvl);
+
     // Check that the level is traversable
     if (has_stair_down && has_stair_up) {
         if (!can_walk(dlvl, stair_down, stair_up))
@@ -1075,17 +1404,12 @@ void generate_level(int dlvl)
     // Add doors
     for (int i_x = 0; i_x < LEVEL_HEIGHT; i_x++)
         for (int i_y = 0; i_y < LEVEL_WIDTH; i_y++)
-            if (can_place_door(level_map, (Coord) {i_x, i_y}) &&
-                level_map[i_x][i_y] != T_STAIRS_DOWN &&
-                level_map[i_x][i_y] != T_STAIRS_UP)
+            if (can_place_door(level_map, (Coord) {i_x, i_y}))
                 if ((!IS_WALKABLE(level_map[i_x][i_y]) && rand_int(0, 30) <= 2)
                     ||
                     (IS_WALKABLE(level_map[i_x][i_y]) &&
                      rand_int(0, 40) <= 1)) {
-                    if (rand_int(0, 5) == 0)
-                        level_map[i_x][i_y] = T_OPEN_DOOR;
-                    else
-                        level_map[i_x][i_y] = T_CLOSED_DOOR;
+                    open_wall(dlvl, (Coord) {i_x, i_y});
                 }
 
     // TODO: add traps & features
@@ -1093,7 +1417,7 @@ void generate_level(int dlvl)
     // TODO: add patches of fungus/grass
 
     // Potentially add collapsed area
-    if (dlvl != DLVL_MAX - 1 && rand_int(1, 100) <= 40 &&
+    if (dlvl != DLVL_MAX - 1 && rand_int(1, 100) <= 33 &&
         (dlvl_types[dlvl] == DLVL_NORMAL ||
          dlvl_types[dlvl] == DLVL_MAINTENANCE)) {
         bool *blob = calloc((size_t) chasm_height * chasm_width, sizeof(bool));

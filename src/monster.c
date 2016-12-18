@@ -242,7 +242,7 @@ void make_monsters(int dlvl, int nb)
         mon->remembered_pos = (Coord) {0, 0};
 
         mon->dlvl = dlvl;
-        if (!find_tile(dlvl, &mon->pos, false, -1)) {
+        if (!find_tile(&mon->pos, dlvl, false, -1)) {
             print_to_log("Level %d full, cannot add monster", dlvl);
             free(mon);
             return;

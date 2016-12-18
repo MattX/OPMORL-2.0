@@ -37,40 +37,6 @@ void display_everything()
     display_map();
 }
 
-/**
- * Returns the orientation of a tile type at a given coordinate. This is made
- * to recognize the following situations (assuming type == wall)
- *
- *     ...          .#.        .#.  .#.
- *     #X#          .X.        .X.  .X#
- *     ...          .#.        ...  .#.
- *  Horizontal    Vertical       None
- *
- * @param dlvl
- * @param pos
- * @param type
- * @return 1 for horizontal, -1 for vertical, 0 for none
- */
-static int get_orientation(int dlvl, Coord pos, TileType type)
-{
-    // There is no orientation at the edge of the map
-    if (pos.x == 0 || pos.x == LEVEL_HEIGHT - 1 || pos.y == 0
-        || pos.y == LEVEL_WIDTH - 1)
-        return 0;
-
-    bool up = maps[dlvl][pos.x - 1][pos.y] == type;
-    bool down = maps[dlvl][pos.x + 1][pos.y] == type;
-    bool left = maps[dlvl][pos.x][pos.y - 1] == type;
-    bool right = maps[dlvl][pos.x][pos.y + 1] == type;
-
-    if (up && down && !left && !right)
-        return -1;
-    else if (!up && !down && left && right)
-        return 1;
-    else
-        return 0;
-}
-
 
 /**
  * Return the appropriate glyph (-, | or +) to represent
@@ -80,9 +46,9 @@ char select_door_glyph(int dlvl, Coord pos)
 {
     switch (get_orientation(dlvl, pos, T_WALL)) {
     case 1:
-        return '-';
-    case -1:
         return '|';
+    case -1:
+        return '-';
     default:
         return '-';
     }
@@ -94,13 +60,12 @@ char select_door_glyph(int dlvl, Coord pos)
  */
 void display_map()
 {
-    int i, j;
     LinkedListNode *obj_node = o_list->head;
     LinkedListNode *mon_node = m_list->head;
 
     attron(COLOR_PAIR(DEFAULT));
-    for (i = 0; i < LEVEL_HEIGHT; i++) {
-        for (j = 0; j < LEVEL_WIDTH; j++) {
+    for (int i = 0; i < LEVEL_HEIGHT; i++) {
+        for (int j = 0; j < LEVEL_WIDTH; j++) {
             char glyph;
 
             if (visibility_map[rodney.dlvl][i][j] == TS_UNDISCOVERED) {
@@ -113,7 +78,7 @@ void display_map()
 
             attroff(COLOR_PAIR(DEFAULT));
             attron(COLOR_PAIR(tile_types[maps[rodney.dlvl][i][j]].color));
-            if (maps[rodney.dlvl][i][j] == T_OPEN_DOOR)
+            if (maps[rodney.dlvl][i][j] == T_DOOR_OPEN)
                 glyph = select_door_glyph(rodney.dlvl, (Coord) {i, j});
             else
                 glyph = tile_types[maps[rodney.dlvl][i][j]].sym;
@@ -161,6 +126,25 @@ void display_map()
     attroff(A_BOLD);
 
     move(rodney.pos.x + 1, rodney.pos.y);
+}
+
+
+void display_cc_map(int *components)
+{
+    for (int i = 0; i < LEVEL_HEIGHT; i++) {
+        for (int j = 0; j < LEVEL_WIDTH; j++) {
+            int val = components[i * LEVEL_WIDTH + j];
+            char glyph;
+
+            if (val < 0) glyph = '-';
+            else if (val < 10) glyph = '0' + val;
+            else if (val < 36) glyph = 'A' + val - 10;
+            else glyph = 'x';
+
+            mvaddch(i + 1, j, glyph);
+        }
+    }
+
 }
 
 /**

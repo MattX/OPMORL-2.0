@@ -52,7 +52,7 @@ int use_object(Object *object)
     IF_HAS(object, MT_US_TP)
         pline("The room around you suddenly changes!");
         // Guaranteed to succeed since rodney is on a tile.
-        find_tile(rodney.dlvl, &rodney.pos, false, -1);
+        find_tile(&rodney.pos, rodney.dlvl, false, -1);
     }
     IF_HAS(object, MT_US_ENCHANT)
         pline("Choose an object to enchant.");

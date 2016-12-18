@@ -8,6 +8,25 @@
  */
 
 #include "opmorl.h"
+#include "linkedlist.h"
+
+
+/**
+ * Compute the level to which you fall if you jump into the collapsed floor at
+ * the given coordinates
+ * @param dlvl, at Player coordinates
+ * @return The fall level
+ */
+static int get_fall_level(int dlvl, Coord at)
+{
+    int fall_dlvl = dlvl + 1;
+    while (fall_dlvl < DLVL_MAX && maps[fall_dlvl][at.x][at.y] == T_COLLAPSED) {
+        fall_dlvl++;
+    }
+
+    return fall_dlvl;
+}
+
 
 /**
  * Moves the player, checking that the target cell can be walked on and is
@@ -32,27 +51,31 @@ int move_rodney(Coord to)
         }
     }
 
-    if (!IS_WALKABLE(maps[rodney.dlvl][to.x][to.y])) {
-        if (maps[rodney.dlvl][to.x][to.y] == T_CLOSED_DOOR) {
+    TileType target_type = maps[rodney.dlvl][to.x][to.y];
+
+    if (!IS_WALKABLE(target_type)) {
+        if (target_type == T_DOOR_CLOSED) {
             return toggle_door(
                     (Coord) {to.x - rodney.pos.x, to.y - rodney.pos.y}, true);
-        } else if (maps[rodney.dlvl][to.x][to.y] == T_COLLAPSED) {
+        } else if (target_type == T_COLLAPSED) {
+            int fall_level = get_fall_level(rodney.dlvl, to);
+
             bool confirm = yes_no("The floor has collapsed here, and you can "
-                                          "see the level below. Jump?");
+                                          "see the %d levels below. Jump?",
+                                  fall_level);
             if (!confirm) {
                 return 0;
             }
 
-            int dlvl = rodney.dlvl + 1;
-            while (dlvl < DLVL_MAX && maps[dlvl][to.x][to.y] == T_COLLAPSED) {
-                dlvl++;
-            }
-
             pline("You fall through the collapsed floor.");
 
-            if (change_dlvl(dlvl, -1))
-                take_damage((rodney.dlvl - dlvl) * 3);
-        } else return 0;
+            if (change_dlvl(fall_level, -1))
+                take_damage((rodney.dlvl - fall_level) * 3);
+        } else if (target_type == T_PORTCULLIS_DOWN) {
+            pline("You bump into the lowered portcullis.");
+            return 0;
+        } else
+            return 0;
     }
 
     rodney.pos = to;
@@ -81,7 +104,13 @@ int change_dlvl(int to_dlvl, int tile_type)
     if (tile_type < 0 || tile_type > NB_TILE_TYPES) {
         found_tile = find_closest(to_dlvl, &new, false, T_FLOOR, rodney.pos);
     } else {
-        found_tile = find_tile(to_dlvl, &new, false, tile_type);
+        found_tile = find_tile(&new, to_dlvl, false, tile_type);
+    }
+
+    if (!found_tile && god_mode) {
+        // Make an extra effort to find a tile
+        pline("Made an extra effort for a God.");
+        found_tile = find_tile(&new, to_dlvl, false, -1);
     }
 
     if (!found_tile) {
@@ -90,21 +119,22 @@ int change_dlvl(int to_dlvl, int tile_type)
         } else {
             if (find_mon_at(to_dlvl, new))
                 pline("The staircase is blocked by a monster.");
-            else // There is no up staircase on the level below
-                pline("The staircase is blocked by debris from its collapsed roof.");
+            else // There is no corresponding staircase
+                pline("The staircase is blocked by debris from its collapsed "
+                              "roof.");
         }
         return 0;
-    } else {
-        rodney.dlvl = to_dlvl;
-        rodney.pos = new;
-
-        if (!visited[rodney.dlvl]) {
-            visited[rodney.dlvl] = true;
-            make_monsters(rodney.dlvl, -1);
-        }
-
-        return 1;
     }
+
+    rodney.dlvl = to_dlvl;
+    rodney.pos = new;
+
+    if (!visited[rodney.dlvl]) {
+        visited[rodney.dlvl] = true;
+        make_monsters(rodney.dlvl, -1);
+    }
+
+    return 1;
 }
 
 /**
@@ -306,10 +336,10 @@ int zap()
 
 /**
  * Opens or closes a door
- * @return The number of turns the action took
  * @param direction If not set to (0,0), the direction in which to open a door.
  * Otherwise, will prompt the player for a direction.
  * @param open If set to false, will close the door.
+ * @return The number of turns the action took
  */
 int toggle_door(Coord direction, bool open)
 {
@@ -319,13 +349,8 @@ int toggle_door(Coord direction, bool open)
         direction = get_direction();
     Coord target = coord_add(rodney.pos, direction);
 
-    if (open) {
-        prev = T_CLOSED_DOOR;
-        new = T_OPEN_DOOR;
-    } else {
-        prev = T_OPEN_DOOR;
-        new = T_CLOSED_DOOR;
-    }
+    prev = open ? T_DOOR_CLOSED : T_DOOR_OPEN;
+    new = open ? T_DOOR_OPEN : T_DOOR_CLOSED;
 
     if (maps[rodney.dlvl][target.x][target.y] == new) {
         pline("This door is already %s!", open ? "open" : "closed");
@@ -340,6 +365,97 @@ int toggle_door(Coord direction, bool open)
     } else {
         pline("The door %s.", open ? "opens" : "closes");
         maps[rodney.dlvl][target.x][target.y] = new;
+    }
+
+    return 1;
+}
+
+
+/**
+ * Helper function to set a portcullis' state
+ * @param dlvl, pos The coordinates of the portcullis
+ * @param open If true, raises the portcullis. Otherwise, lowers it.
+ */
+static void set_portcullis(int dlvl, Coord pos, bool open)
+{
+    TileType prev = open ? T_PORTCULLIS_DOWN : T_PORTCULLIS_UP;
+    TileType new = open ? T_PORTCULLIS_UP : T_PORTCULLIS_DOWN;
+
+    if (maps[dlvl][pos.x][pos.y] == prev) {
+        maps[dlvl][pos.x][pos.y] = new;
+        for (int i_neighbor = 0; i_neighbor < 4; i_neighbor++) {
+            Coord neighbor = get_neighbor(pos, i_neighbor);
+            if (valid_coordinates(neighbor.x, neighbor.y))
+                set_portcullis(dlvl, neighbor, open);
+        }
+    }
+}
+
+
+/**
+ * Toggle a portcullis
+ * @param dlvl, pos The coordinates of the portcullis
+ */
+static void toggle_portcullis(int dlvl, Coord pos)
+{
+    bool open;
+
+    if (maps[dlvl][pos.x][pos.y] == T_PORTCULLIS_DOWN)
+        open = true;
+    else if (maps[dlvl][pos.x][pos.y] == T_PORTCULLIS_UP)
+        open = false;
+    else {
+        pline("You don't hear anything");
+        return;
+    }
+
+    set_portcullis(dlvl, pos, open);
+    pline("You hear a lound grinding sound.");
+}
+
+
+/**
+ * Toggles a lever (duh)
+ * @return The number of turns the action took
+ */
+int toggle_lever()
+{
+    if (maps[rodney.dlvl][rodney.pos.x][rodney.pos.y] != T_LEVER) {
+        pline("You see no lever to toggle here.");
+        return 0;
+    }
+
+    LinkedListNode *lever_descriptor = lever_connections->head;
+    LeverConnection *lc = NULL;
+    while (lever_descriptor != NULL) {
+        lc = (LeverConnection *) lever_descriptor->element;
+        if (lc->dlvl == rodney.dlvl && lc->pos.x == rodney.pos.x &&
+            lc->pos.y == rodney.pos.y)
+            break;
+
+        lever_descriptor = lever_descriptor->next;
+    }
+
+    if (lever_descriptor == NULL) {
+        if (dlvl_types[rodney.dlvl] == DLVL_ADMINISTRATOR) {
+            // On the administrator level, an unregistered level is probably the
+            // administrator's.
+            pline("You hear a the sound of a gigantic pump starting up.");
+            for (int i = 0; i < DLVL_MAX; i++) {
+                dlvl_flags[i] &= ~DFLAGS_FLOODED;
+            }
+        } else
+            pline("You hear a mechanism click, but nothing seems to happen.");
+        return 1;
+    }
+
+    switch (maps[lc->target_dlvl][lc->target_pos.x][lc->target_pos.y]) {
+    case T_PORTCULLIS_DOWN:
+    case T_PORTCULLIS_UP:
+        toggle_portcullis(lc->target_dlvl, lc->target_pos);
+        break;
+    default:
+        pline("You hear cogs click, but nothing seems to happen.");
     }
 
     return 1;

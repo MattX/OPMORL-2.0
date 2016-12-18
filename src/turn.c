@@ -101,6 +101,9 @@ void process_turn(char c)
     case 'c':
         turn_elapsed = toggle_door((Coord) {0, 0}, false);
         break;
+    case 't':
+        turn_elapsed = toggle_lever();
+        break;
 #ifdef DEBUG
     case 'G':
         god_mode = !god_mode;

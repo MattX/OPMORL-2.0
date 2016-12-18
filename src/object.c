@@ -380,7 +380,7 @@ void add_level_objects(int level)
             obj->uses_left = -1;
 
         obj->flags = 0;
-        if (!find_tile(level, &obj->pos, true, -1)) {
+        if (!find_tile(&obj->pos, level, true, -1)) {
             print_to_log("Could not place object %d on dlvl %d\n", i, level);
             return;
         }

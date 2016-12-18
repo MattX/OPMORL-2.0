@@ -345,8 +345,8 @@ typedef enum
 {
     T_WALL,
     T_CORRIDOR,
-    T_OPEN_DOOR,
-    T_CLOSED_DOOR,
+    T_DOOR_OPEN,
+    T_DOOR_CLOSED,
     T_FLOOR,
     T_STAIRS_UP,
     T_STAIRS_DOWN,
@@ -377,6 +377,8 @@ struct s_tile_type
 };
 
 #define IS_WALKABLE(x) (tile_types[x].walkable)
+#define POTENTIALLY_WALKABLE(x) (IS_WALKABLE(x) || x == T_DOOR_CLOSED || \
+                                 x == T_PORTCULLIS_DOWN)
 #define IS_TRANSPARENT(x) (tile_types[x].transparent)
 
 extern struct s_tile_type tile_types[NB_TILE_TYPES];
@@ -420,6 +422,17 @@ enum e_dungeon_level_flags
     DFLAGS_FLOODED = 0x01
 };
 
+/**
+ * Connection between a lever and a target (portcullis, trapdoor, vent,...)
+ */
+typedef struct
+{
+    int dlvl;
+    Coord pos;
+    int target_dlvl;
+    Coord target_pos;
+} LeverConnection;
+
 
 /***********/
 
@@ -447,7 +460,7 @@ void system_init();
 
 void init_game();
 
-void init_colors();
+void define_colors();
 
 void game_loop();
 
@@ -455,7 +468,7 @@ void exit_game();
 
 void exit_ncurses();
 
-int find_tile(int, Coord *coords, bool, int);
+int find_tile(Coord *coords, int, bool, int);
 
 void recompute_visibility();
 
@@ -583,6 +596,14 @@ bool find_closest(int dlvl, Coord *coords, bool can_have_mon, int tile_type,
 void take_damage(int damage);
 
 Coord get_neighbor(Coord around, int n);
+
+int get_orientation(int dlvl, Coord pos, TileType type);
+
+bool valid_coordinates(int x, int y);
+
+void display_cc_map(int *components);
+
+int toggle_lever();
 
 /* Globals */
 

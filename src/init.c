@@ -21,7 +21,7 @@ void system_init()
 	keypad(stdscr, TRUE);
 	noecho();
 
-	init_colors();
+    define_colors();
     line_needs_confirm = 0;
 
     log_file = fopen(LOGFILE_PATH, "a");
@@ -42,7 +42,8 @@ init_pair(id, id, DEFAULT_BACKCOLOR)
 /**
  * Initializes ncurses colors and pairs
  */
-void init_colors() {
+void define_colors()
+{
     start_color();
 
     if (COLORS < 255 || COLOR_PAIRS < 50) {
@@ -102,6 +103,7 @@ void init_game()
 
     init_monster_types();
     make_object_classes();
+    lever_connections = new_linked_list();
 
     rodney.gold = ndn(10, 20);
     rodney.explevel = 1;
