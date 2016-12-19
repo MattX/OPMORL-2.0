@@ -60,22 +60,27 @@ int move_rodney(Coord to)
         } else if (target_type == T_COLLAPSED) {
             int fall_level = get_fall_level(rodney.dlvl, to);
 
-            bool confirm = yes_no("The floor has collapsed here, and you can "
-                                          "see the %d levels below. Jump?",
-                                  fall_level);
+            pline("The ground has collapsed here.");
+            pline("You can see the floor %d levels below.",
+                  fall_level - rodney.dlvl);
+            bool confirm = yes_no("Jump?");
             if (!confirm) {
                 return 0;
             }
 
             pline("You fall through the collapsed floor.");
 
+            rodney.pos = to;
             if (change_dlvl(fall_level, -1))
                 take_damage((rodney.dlvl - fall_level) * 3);
+            return 1;
         } else if (target_type == T_PORTCULLIS_DOWN) {
             pline("You bump into the lowered portcullis.");
-            return 0;
-        } else
-            return 0;
+        } else if (target_type == T_PIPE || target_type == T_PIPE_EXHAUST) {
+            pline("You bump into the pipe.");
+        }
+
+        return 0;
     }
 
     rodney.pos = to;
@@ -97,12 +102,12 @@ int change_dlvl(int to_dlvl, int tile_type)
     int found_tile;
 
     if (to_dlvl < 0 || to_dlvl >= DLVL_MAX) {
-        pline("A mysterious force prevents you from passing");
+        pline("A mysterious force prevents you from passing.");
         return 0;
     }
 
     if (tile_type < 0 || tile_type > NB_TILE_TYPES) {
-        found_tile = find_closest(to_dlvl, &new, false, T_FLOOR, rodney.pos);
+        found_tile = find_closest(&new, to_dlvl, rodney.pos, false, -1);
     } else {
         found_tile = find_tile(&new, to_dlvl, false, tile_type);
     }
@@ -131,7 +136,7 @@ int change_dlvl(int to_dlvl, int tile_type)
 
     if (!visited[rodney.dlvl]) {
         visited[rodney.dlvl] = true;
-        make_monsters(rodney.dlvl, -1);
+        //make_monsters(rodney.dlvl, -1);
     }
 
     return 1;
@@ -360,6 +365,14 @@ int toggle_door(Coord direction, bool open)
         return 0;
     }
 
+    if (!open) {
+        Monster *m = find_mon_at(rodney.dlvl, target);
+        if (m != NULL) {
+            pline("The %s blocks the door!", m->type->name);
+            return 0;
+        }
+    }
+
     if (ndn(2, 3) < 4) {
         pline("The door resists.");
     } else {
@@ -385,7 +398,7 @@ static void set_portcullis(int dlvl, Coord pos, bool open)
         maps[dlvl][pos.x][pos.y] = new;
         for (int i_neighbor = 0; i_neighbor < 4; i_neighbor++) {
             Coord neighbor = get_neighbor(pos, i_neighbor);
-            if (valid_coordinates(neighbor.x, neighbor.y))
+            if (valid_coordinates(neighbor))
                 set_portcullis(dlvl, neighbor, open);
         }
     }
@@ -458,5 +471,32 @@ int toggle_lever()
         pline("You hear cogs click, but nothing seems to happen.");
     }
 
+    return 1;
+}
+
+
+/**
+ * Teleports the player
+ * @return The number of turns the action took
+ */
+int teleport()
+{
+    if (!god_mode) {
+        pline("You cannot control your teleportation.");
+        return 0;
+    }
+
+    Coord dest;
+    bool confirmed = get_point(&dest);
+
+    if (!confirmed)
+        return 0;
+
+    if (!find_closest(&dest, rodney.dlvl, dest, false, -1)) {
+        pline("Could not find a suitable tile.");
+        return 0;
+    }
+
+    rodney.pos = dest;
     return 1;
 }

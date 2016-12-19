@@ -8,8 +8,8 @@
  */
 
 #include <unistd.h>
+#include <math.h>
 #include "opmorl.h"
-
 
 /**
  * Map tile definitions
@@ -26,19 +26,19 @@ struct s_tile_type tile_types[NB_TILE_TYPES] =
                 {true,  true,  '<', CLR_DEFAULT},   // stairs down
                 {true,  true,  '>', CLR_DEFAULT},   // stairs up
                 {false, false, ' ', CLR_DEFAULT},   // ground
-                {false, true,  '.', CLR_DARKGRAY},  // collapsed
+                {false, true,  '~', CLR_DEFAULT},   // collapsed
                 {true,  true,  '^', CLR_DEFAULT},   // locked trapdoor
                 {false, true,  '-', CLR_DEFAULT},   // open trapdoor
-                {true,  true,  '/', CLR_DEFAULT},   // lever
+                {true,  true,  '/', CLR_YELLOW},    // lever
                 {false, false, 'W', CLR_YELLOW},    // pipe (special sym)
                 {false, false, 'o', CLR_YELLOW},    // pipe exhaust
                 {true,  true,  ';', CLR_GREEN},     // grass
-                {true,  true,  ';', CLR_DEFAULT},   // fungus
-                {false, false, 'T', CLR_DEFAULT},   // tree
+                {true,  true,  ';', CLR_MAGENTA},   // fungus
+                {false, false, 'T', CLR_GREEN},     // tree
                 {true,  true,  '}', CLR_BLUE},      // fountain
-                {true,  true,  '.', CLR_STEELBLUE}, // portcullis up
-                {false, true,  '#', CLR_STEELBLUE}, // portcullis down
-                {true,  false, '*', CLR_LIGHTGRAY}, // rubble
+                {true,  true,  '.', CLR_BLUE},      // portcullis up
+                {false, true,  '#', CLR_BLUE},      // portcullis down
+                {true,  false, '*', CLR_DEFAULT},   // rubble
         };
 
 
@@ -59,11 +59,20 @@ const int portcullis_chance = 10;
 /**
  * Checks if the coordinates are valid (ie in the map)
  */
-bool valid_coordinates(int x, int y)
+inline bool valid_coordinates(Coord pos)
 {
-    return (x >= 0 && x < LEVEL_HEIGHT && y >= 0 && y < LEVEL_WIDTH);
+    return (pos.x >= 0 && pos.x < LEVEL_HEIGHT && pos.y >= 0 &&
+            pos.y < LEVEL_WIDTH);
 }
 
+/**
+ * Checks if the coordinates point to an outer wall
+ */
+static bool is_outer_wall(Coord pos)
+{
+    return (pos.x == 0 || pos.y == 0 || pos.x == LEVEL_HEIGHT - 1 ||
+            pos.y == LEVEL_WIDTH - 1);
+}
 
 /**
  * Helper function: returns the coordinates of a neighboring cell.
@@ -108,8 +117,7 @@ Coord get_neighbor(Coord around, int n)
 int get_orientation(int dlvl, Coord pos, TileType type)
 {
     // There is no orientation at the edge of the map
-    if (pos.x == 0 || pos.x == LEVEL_HEIGHT - 1 || pos.y == 0
-        || pos.y == LEVEL_WIDTH - 1)
+    if (is_outer_wall(pos))
         return 0;
 
     bool up = maps[dlvl][pos.x - 1][pos.y] == type;
@@ -159,13 +167,13 @@ static bool fits_criteria(int dlvl, Coord pos, bool can_have_mon, int tile_type)
     bool looking_for_specific_type =
             tile_type >= 0 && tile_type < NB_TILE_TYPES;
 
-    if (((!looking_for_specific_type &&
-          IS_WALKABLE(maps[dlvl][pos.x][pos.y])) ||
-         (looking_for_specific_type &&
-          maps[dlvl][pos.x][pos.y] == tile_type)) &&
-        (!can_have_mon ||
-         (find_mon_at(dlvl, pos) == NULL && pos.x != rodney.pos.x &&
-          pos.y != rodney.pos.y))) {
+    if (((!looking_for_specific_type && IS_WALKABLE(maps[dlvl][pos.x][pos.y]))
+         ||
+         (looking_for_specific_type && maps[dlvl][pos.x][pos.y] == tile_type))
+        &&
+        (!can_have_mon || (find_mon_at(dlvl, pos) == NULL &&
+                           (dlvl != rodney.dlvl || pos.x != rodney.pos.x ||
+                            pos.y != rodney.pos.y)))) {
         return true;
     }
     return false;
@@ -250,16 +258,16 @@ find_tile(Coord *coords, int dlvl, bool can_have_mon, int tile_type)
 
 /**
  * Finds the closest (walkable) tile to a specified tile.
- * @param dlvl The depth level to search on
  * @param coords A pointer to a Coord struct where the coordinates will be
  * stored
+ * @param dlvl The depth level to search on
+ * @param near The coordinates around which we look
  * @param can_have_mon Whether the tile can have a monster on it
  * @param tile_type If in [0, NB_TILE_TYPES-1], specifies a tile type
- * @param near The coordinates around which we look
  * @return Whether a tile was found.
  */
-bool find_closest(int dlvl, Coord *coords, bool can_have_mon, int tile_type,
-                  Coord near)
+bool find_closest(Coord *coords, int dlvl, Coord near, bool can_have_mon,
+                  int tile_type)
 {
     for (int radius = 0; radius < LEVEL_WIDTH; radius++) {
         for (int i_x = near.x - radius; i_x <= near.x + radius; i_x++) {
@@ -267,6 +275,9 @@ bool find_closest(int dlvl, Coord *coords, bool can_have_mon, int tile_type,
                 if (i_x != near.x - radius && i_x != near.x + radius &&
                     i_y != near.y - radius && i_y != near.y + radius)
                     continue;
+                if (!valid_coordinates((Coord) {i_x, i_y}))
+                    continue;
+
                 if (fits_criteria(dlvl, (Coord) {i_x, i_y}, can_have_mon,
                                   tile_type)) {
                     coords->x = i_x;
@@ -375,7 +386,7 @@ static bool can_walk_mask(bool *mask, int width, Coord from, Coord to)
 
         for (int i_neighbor = 0; i_neighbor < 8; i_neighbor++) {
             Coord cur = get_neighbor(cur_root, i_neighbor);
-            if (!valid_coordinates(cur.x, cur.y))
+            if (!valid_coordinates(cur))
                 continue;
 
             if (mask[cur.x * width + cur.y] && !checked[cur.x][cur.y]) {
@@ -590,7 +601,7 @@ bool dijkstra(int dlvl, Coord from, Coord to, Coord *next,
 
             for (int i_neighbor = 0; i_neighbor < 8; i_neighbor++) {
                 Coord cur = get_neighbor(parent, i_neighbor);
-                if (!valid_coordinates(cur.x, cur.y))
+                if (!valid_coordinates(cur))
                     continue;
 
                 if (!visited[cur.x][cur.y] &&
@@ -878,7 +889,7 @@ bool load_grid()
 
 /**
  * Replace a continuous set of grid tiles with another tile type on a given
- * level.
+ * level. Only side (not diagonal) connections are considered.
  * @param level A level map in which to perform the replacement
  * @param from_x, from_y The coordinates from which to start the replacement
  * @param to_type The new tile type
@@ -891,19 +902,12 @@ static void replace_tiles_from(TileType (*level)[LEVEL_WIDTH], Coord from,
 
     level[from.x][from.y] = to_type;
 
-    if (from.x != 0)
-        replace_tiles_from(level, (Coord) {from.x - 1, from.y}, source_type,
-                           to_type);
-    if (from.x != LEVEL_HEIGHT - 1)
-        replace_tiles_from(level, (Coord) {from.x + 1, from.y}, source_type,
-                           to_type);
-
-    if (from.y != 0)
-        replace_tiles_from(level, (Coord) {from.x, from.y - 1}, source_type,
-                           to_type);
-    if (from.y != LEVEL_WIDTH - 1)
-        replace_tiles_from(level, (Coord) {from.x, from.y + 1}, source_type,
-                           to_type);
+    for (int i_neighbor = 0; i_neighbor < 4; i_neighbor++) {
+        Coord neighbor = get_neighbor(from, i_neighbor);
+        if (!valid_coordinates(neighbor))
+            continue;
+        replace_tiles_from(level, neighbor, source_type, to_type);
+    }
 }
 
 
@@ -917,8 +921,7 @@ static void replace_tiles_from(TileType (*level)[LEVEL_WIDTH], Coord from,
  */
 static bool surrounded_by_walkable(TileType (*level)[LEVEL_WIDTH], Coord pos)
 {
-    if (pos.x == 0 || pos.x == LEVEL_HEIGHT - 1 || pos.y == 0
-        || pos.y == LEVEL_WIDTH - 1)
+    if (is_outer_wall(pos))
         return false;
 
     if (IS_WALKABLE(level[pos.x - 1][pos.y]) &&
@@ -940,8 +943,7 @@ static bool surrounded_by_walkable(TileType (*level)[LEVEL_WIDTH], Coord pos)
 static bool can_place_door(TileType (*level)[LEVEL_WIDTH], Coord pos)
 {
     // We shouldn't be on an edge of the map
-    if (pos.x == 0 || pos.x == LEVEL_HEIGHT - 1 || pos.y == 0
-        || pos.y == LEVEL_WIDTH - 1)
+    if (is_outer_wall(pos))
         return false;
 
     // We should be overwriting a boring block
@@ -984,7 +986,7 @@ static void flood(int dlvl, int *map, Coord starting_pos, int value)
 
     for (int i_neighbor = 0; i_neighbor < 8; i_neighbor++) {
         Coord neighbor = get_neighbor(starting_pos, i_neighbor);
-        if (valid_coordinates(neighbor.x, neighbor.y) &&
+        if (valid_coordinates(neighbor) &&
             POTENTIALLY_WALKABLE(maps[dlvl][neighbor.x][neighbor.y]) &&
             map[neighbor.x * LEVEL_WIDTH + neighbor.y] != value)
             flood(dlvl, map, neighbor, value);
@@ -1038,7 +1040,7 @@ static bool separates_components(int *components_map, Coord pos, int component)
     // Only check the first 4 neighbors, i.e the sides
     for (int i_neighbor = 0; i_neighbor < 4; i_neighbor++) {
         Coord neighbor = get_neighbor(pos, i_neighbor);
-        if (!valid_coordinates(neighbor.x, neighbor.y))
+        if (!valid_coordinates(neighbor))
             continue;
 
         int val = components_map[neighbor.x * LEVEL_WIDTH + neighbor.y];
@@ -1090,9 +1092,9 @@ static void open_wall(int dlvl, Coord pos)
     Coord incremented = coord_add(pos, increment_direction);
     Coord decremented = coord_add(pos, decrement_direction);
 
-    if (valid_coordinates(incremented.x, incremented.y) &&
+    if (valid_coordinates(incremented) &&
         can_place_door(maps[dlvl], incremented) &&
-        valid_coordinates(decremented.x, decremented.y) &&
+        valid_coordinates(decremented) &&
         can_place_door(maps[dlvl], decremented)) {
         maps[dlvl][incremented.x][incremented.y] = T_PORTCULLIS_DOWN;
         maps[dlvl][pos.x][pos.y] = T_PORTCULLIS_DOWN;
@@ -1277,23 +1279,109 @@ static void make_administator(int dlvl)
 
     // Add a lever on a walkable tile
     Coord lever_position;
-    for (int attempts = 0; attempts < 100; attempts++) {
-        lever_position.x = room_pos.x + rand_int(3, size_x - 3);
-        lever_position.y = room_pos.y + rand_int(3, size_y - 3);
-        if (maps[dlvl][lever_position.x][lever_position.y] == T_FLOOR) {
-            maps[dlvl][lever_position.x][lever_position.y] = T_LEVER;
-            break;
+    lever_position.x = room_pos.x + rand_int(3, size_x - 3);
+    lever_position.y = room_pos.y + rand_int(3, size_y - 3);
+    maps[dlvl][lever_position.x][lever_position.y] = T_LEVER;
+
+    //TODO: add a zoo
+}
+
+
+/**
+ * Add the archmage's garden to a level.
+ */
+static void make_archmage(int dlvl)
+{
+    const int garden_width = 30;
+    const int garden_height = 15;
+    /* Feature probabilities, cumulative */
+    const int fungus_prob = 20;
+    const int tree_prob = 25;
+    const int fountain_prob = 28;
+
+    Coord pos;
+    pos.x = rand_int(1, LEVEL_HEIGHT - garden_height - 2);
+    pos.y = rand_int(1, LEVEL_WIDTH - garden_width - 2);
+
+    // Draw an ellipse
+    for (int i_x = 0; i_x < garden_height; i_x++) {
+        double x_prime = 1.0 - 2 * (i_x + 0.5) / (double) garden_height;
+        double width = garden_width * sqrt(1 - pow(x_prime, 2));
+        int offset = (int) round((garden_width - width) / 2);
+
+        for (int i_y = offset; i_y < garden_width - offset; i_y++) {
+            int x = i_x + pos.x;
+            int y = i_y + pos.y;
+
+            if (IS_STAIRS(maps[dlvl][x][y]))
+                continue;
+
+            int selection = rand_int(1, 100);
+            TileType new_type;
+            if (selection <= fungus_prob)
+                new_type = T_FUNGUS;
+            else if (selection <= tree_prob)
+                new_type = T_TREE;
+            else if (selection <= fountain_prob)
+                new_type = T_FOUNTAIN;
+            else
+                new_type = T_GRASS;
+
+            maps[dlvl][x][y] = new_type;
         }
     }
 }
 
 
 /**
- * Add the archmage's garden to a level
+ * Replaces a wall with piping
+ * @param dlvl Coordinates of the starting point
  */
-static void make_archmage(int dlvl)
+void create_pipe(int dlvl, Coord starting_point)
 {
+    const int exhaust_prob = 5;
+    const int stop_prob = 8;
 
+    if (rand_int(1, 100) <= stop_prob)
+        return;
+
+    if (rand_int(1, 100) <= exhaust_prob)
+        maps[dlvl][starting_point.x][starting_point.y] = T_PIPE_EXHAUST;
+    else
+        maps[dlvl][starting_point.x][starting_point.y] = T_PIPE;
+
+    for (int i_neighbor = 0; i_neighbor < 8; i_neighbor++) {
+        Coord neighbor = get_neighbor(starting_point, i_neighbor);
+        if (valid_coordinates(neighbor) &&
+            !is_outer_wall(neighbor) &&
+            maps[dlvl][neighbor.x][neighbor.y] == T_WALL)
+            create_pipe(dlvl, neighbor);
+    }
+}
+
+
+/**
+ * Replaces some walls with pipes and pipe exhausts.
+ */
+void make_maintenance_pipes(int dlvl)
+{
+    int starting_points = ndn(3, 5);
+    int failsafe = 10;
+
+    for (int i_start = 0; i_start < starting_points && failsafe; i_start++) {
+        Coord starting;
+        int found = find_tile(&starting, dlvl, true, T_WALL);
+
+        if (!found)
+            break;
+
+        if (is_outer_wall(starting)) {
+            failsafe--;
+            continue;
+        }
+
+        create_pipe(dlvl, starting);
+    }
 }
 
 
@@ -1336,7 +1424,9 @@ void generate_level(int dlvl)
             if (grid[i_x][i_y] != GT_WALL)
                 continue;
 
-            if (rand_int(0, 10) <= 4)
+            if ((dlvl_types[dlvl] != DLVL_MAINTENANCE &&
+                 rand_int(1, 10) <= 5) ||
+                (dlvl_types[dlvl] == DLVL_MAINTENANCE && rand_int(1, 10) <= 2))
                 replace_tiles_from(level_map, (Coord) {i_x, i_y}, GT_WALL,
                                    T_FLOOR);
             else
@@ -1381,7 +1471,7 @@ void generate_level(int dlvl)
         if (!found_previous_stairs) {
             result = find_tile(&stair_up, dlvl, 1, -1);
         } else {
-            result = find_closest(dlvl, &stair_up, 1, -1, previous_stairs);
+            result = find_closest(&stair_up, dlvl, previous_stairs, 1, -1);
         }
     }
 
@@ -1413,7 +1503,11 @@ void generate_level(int dlvl)
                 }
 
     // TODO: add traps & features
-    // TODO: add pipes on maintenance levels
+
+    if (dlvl_types[dlvl] == DLVL_MAINTENANCE) {
+        make_maintenance_pipes(dlvl);
+    }
+
     // TODO: add patches of fungus/grass
 
     // Potentially add collapsed area
@@ -1424,8 +1518,8 @@ void generate_level(int dlvl)
         make_blob(blob, chasm_height, chasm_width);
         for (int attempt = 0; attempt < 5; attempt++) {
             Coord blob_pos;
-            blob_pos.x = rand_int(0, LEVEL_HEIGHT - chasm_height - 1);
-            blob_pos.y = rand_int(0, LEVEL_WIDTH - chasm_width - 1);
+            blob_pos.x = rand_int(1, LEVEL_HEIGHT - chasm_height - 2);
+            blob_pos.y = rand_int(1, LEVEL_WIDTH - chasm_width - 2);
             if (has_stair_up && has_stair_down &&
                 can_walk_blob(blob, chasm_height, chasm_width, blob_pos, dlvl,
                               stair_down, stair_up)) {
@@ -1441,6 +1535,7 @@ void generate_level(int dlvl)
         make_administator(dlvl);
         break;
     case DLVL_ARCHMAGE:
+        make_archmage(dlvl);
         break;
     default:
         break;

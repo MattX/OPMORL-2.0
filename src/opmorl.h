@@ -60,7 +60,6 @@ typedef enum e_color
     CLR_WHITE,
 
     /* Add custom colors after this line */
-
             CLR_LIGHTGRAY,
     CLR_DARKGRAY,
     CLR_LIGHTGREEN,
@@ -380,6 +379,7 @@ struct s_tile_type
 #define POTENTIALLY_WALKABLE(x) (IS_WALKABLE(x) || x == T_DOOR_CLOSED || \
                                  x == T_PORTCULLIS_DOWN)
 #define IS_TRANSPARENT(x) (tile_types[x].transparent)
+#define IS_STAIRS(x) (x == T_STAIRS_UP || x == T_STAIRS_DOWN)
 
 extern struct s_tile_type tile_types[NB_TILE_TYPES];
 
@@ -590,8 +590,8 @@ void layout_dungeon();
 
 void log_layout();
 
-bool find_closest(int dlvl, Coord *coords, bool can_have_mon, int tile_type,
-                  Coord near);
+bool find_closest(Coord *coords, int dlvl, Coord near, bool can_have_mon,
+                  int tile_type);
 
 void take_damage(int damage);
 
@@ -599,11 +599,15 @@ Coord get_neighbor(Coord around, int n);
 
 int get_orientation(int dlvl, Coord pos, TileType type);
 
-bool valid_coordinates(int x, int y);
+bool valid_coordinates(Coord);
 
 void display_cc_map(int *components);
 
 int toggle_lever();
+
+int teleport();
+
+void display_layout();
 
 /* Globals */
 

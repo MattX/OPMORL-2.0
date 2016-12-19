@@ -39,8 +39,8 @@ void display_everything()
 
 
 /**
- * Return the appropriate glyph (-, | or +) to represent
- * the wall at (level, x, y).
+ * Return the appropriate glyph (-, | or +) to represent the wall at
+ * (level, x, y).
  */
 char select_door_glyph(int dlvl, Coord pos)
 {
@@ -56,6 +56,38 @@ char select_door_glyph(int dlvl, Coord pos)
 
 
 /**
+ * Return the appropriate glyph (" or =) for a pipe at the given position.
+ * @param dlvl
+ * @param pos
+ * @return
+ */
+char select_pipe_glyph(int dlvl, Coord pos)
+{
+    bool has_pipe_in_direction[4];
+
+    for (int i_neighbor = 0; i_neighbor < 4; i_neighbor++) {
+        Coord neighbor = get_neighbor(pos, i_neighbor);
+        if (!valid_coordinates(neighbor))
+            continue;
+
+        TileType neighbor_type = maps[dlvl][neighbor.x][neighbor.y];
+        if (neighbor_type == T_PIPE_EXHAUST || neighbor_type == T_PIPE)
+            has_pipe_in_direction[i_neighbor] = true;
+        else
+            has_pipe_in_direction[i_neighbor] = false;
+    }
+
+    bool vert = has_pipe_in_direction[0] || has_pipe_in_direction[3];
+    bool horiz = has_pipe_in_direction[1] || has_pipe_in_direction[2];
+
+    if (vert && !horiz)
+        return '|';
+    else
+        return '=';
+}
+
+
+/**
  * Display a map of the current level.
  */
 void display_map()
@@ -63,7 +95,6 @@ void display_map()
     LinkedListNode *obj_node = o_list->head;
     LinkedListNode *mon_node = m_list->head;
 
-    attron(COLOR_PAIR(DEFAULT));
     for (int i = 0; i < LEVEL_HEIGHT; i++) {
         for (int j = 0; j < LEVEL_WIDTH; j++) {
             char glyph;
@@ -76,15 +107,17 @@ void display_map()
             if (visibility_map[rodney.dlvl][i][j] == TS_SEEN)
                 attron(A_BOLD);
 
-            attroff(COLOR_PAIR(DEFAULT));
-            attron(COLOR_PAIR(tile_types[maps[rodney.dlvl][i][j]].color));
-            if (maps[rodney.dlvl][i][j] == T_DOOR_OPEN)
+            TileType tile = maps[rodney.dlvl][i][j];
+
+            attron(COLOR_PAIR(tile_types[tile].color));
+            if (tile == T_DOOR_OPEN)
                 glyph = select_door_glyph(rodney.dlvl, (Coord) {i, j});
+            else if (tile == T_PIPE)
+                glyph = select_pipe_glyph(rodney.dlvl, (Coord) {i, j});
             else
-                glyph = tile_types[maps[rodney.dlvl][i][j]].sym;
+                glyph = tile_types[tile].sym;
             mvaddch(i + 1, j, glyph);
-            attroff(COLOR_PAIR(tile_types[maps[rodney.dlvl][i][j]].color));
-            attron(COLOR_PAIR(DEFAULT));
+            attroff(COLOR_PAIR(tile_types[tile].color));
 
             if (visibility_map[rodney.dlvl][i][j] == TS_SEEN)
                 attroff(A_BOLD);
@@ -482,4 +515,38 @@ void log_layout()
                      dlvl_flags[i_dlvl]);
     }
 #endif
+}
+
+
+/**
+ * Displays the dungeon layout
+ */
+void display_layout()
+{
+    const char level_types[][100] = {
+            "", "Archmage's garden", "Maintenance level",
+            "Administrator's quarters", "Market", "Bank", "",
+            "Barracks"
+    };
+
+    int i;
+    int line = 1;
+    for (i = 0; i < DLVL_MAX; i++) {
+        if (dlvl_types[i] == DLVL_NORMAL || dlvl_types[i] == DLVL_LAST)
+            continue;
+
+        move(line, 0);
+        clrtoeol();
+        mvprintw(line, 0, "%dth floor (DLVL %d): %s", 42 - i, i + 1,
+                 level_types[dlvl_types[i]]);
+        line++;
+    }
+    move(line, 0);
+    clrtoeol();
+    move(line + 1, 0);
+    clrtoeol();
+    mvprintw(line + 1, 0, "The rest of the directory is illegible.");
+
+    get_input();
+    display_everything();
 }

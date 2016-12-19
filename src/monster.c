@@ -301,8 +301,8 @@ bool check_dead(Monster *target, bool rodney_killed)
 void mon_attack_melee(Monster *mon)
 {
     if (ndn(2, 10) > 10 - rodney.ac + mon->type->difficulty) {
-        take_damage(ndn(3, mon->type->power / 3) - 2);
         pline("The %s hits!", mon->type->name);
+        take_damage(ndn(3, mon->type->power / 3) - 2);
     } else {
         pline("The %s misses!", mon->type->name);
     }

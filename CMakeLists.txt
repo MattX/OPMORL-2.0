@@ -4,8 +4,8 @@ project(OPMORL_2_0)
 find_package(Curses REQUIRED)
 include_directories(${CURSES_INCLUDE_DIR})
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c99 -g -Wall")
-#set(CMAKE_C_COMPILER "/usr/local/bin/gcc-6")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -g -Wall")
+set(CMAKE_C_COMPILER "/usr/local/bin/gcc-6")
 
 set(SOURCE_FILES
         src/init.c
@@ -23,4 +23,4 @@ set(SOURCE_FILES
         src/inv.c src/use.c)
 
 add_executable(opmorl ${SOURCE_FILES})
-target_link_libraries(opmorl ${CURSES_LIBRARIES})
+target_link_libraries(opmorl ${CURSES_LIBRARIES} m)

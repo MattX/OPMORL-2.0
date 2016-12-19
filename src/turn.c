@@ -104,6 +104,13 @@ void process_turn(char c)
     case 't':
         turn_elapsed = toggle_lever();
         break;
+    case 'E':
+        turn_elapsed = teleport();
+        break;
+    case 'L':
+        if (god_mode)
+            display_layout();
+        break;
 #ifdef DEBUG
     case 'G':
         god_mode = !god_mode;
