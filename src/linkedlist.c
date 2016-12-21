@@ -22,8 +22,8 @@ LinkedList *new_linked_list()
     return ret;
 }
 
-/*
- * Deallocates a linked list structre
+/**
+ * De-allocates a linked list structure
  */
 void delete_linked_list(LinkedList *linked_list)
 {
@@ -39,14 +39,17 @@ void delete_linked_list(LinkedList *linked_list)
     free(linked_list);
 }
 
+/**
+ * Checks if a linked list is empty
+ */
 int is_empty(LinkedList *linked_list)
 {
     return linked_list->length == 0;
 }
 
 
-/*
- * Reverse a linked list
+/**
+ * Reverses a linked list
  */
 void reverse_linked_list(LinkedList *linked_list)
 {
@@ -70,12 +73,11 @@ void reverse_linked_list(LinkedList *linked_list)
 }
 
 
-/*
+/**
  * Adds an element at the beginning of a linked list.
  */
 void add_to_linked_list(LinkedList *linked_list, void *item)
 {
-    LinkedListNode *cur = linked_list->head;
     LinkedListNode *new = malloc(sizeof(LinkedListNode));
     new->element = item;
     new->next = linked_list->head;
@@ -83,15 +85,16 @@ void add_to_linked_list(LinkedList *linked_list, void *item)
     linked_list->length++;
 }
 
-/*
- * Deletes the first instance of item from the list. Returns 1 if successful, 0 if the element was not found.
+/**
+ * Deletes the first instance of item from the list. Returns 1 if successful,
+ * 0 if the element was not found.
  */
 int delete_from_linked_list(LinkedList *linked_list, void *item)
 {
     LinkedListNode *cur = linked_list->head;
     LinkedListNode *prev = linked_list->head;
 
-    if(linked_list->head == NULL)
+    if (is_empty(linked_list))
         /* Tried to delete an element from an empty list */
         return 0;
 
@@ -118,8 +121,10 @@ int delete_from_linked_list(LinkedList *linked_list, void *item)
 }
 
 
-/*
- * If compress is true, NULL elements of the array will not be inserted
+/**
+ * Generates a linked list from an array.
+ * @param compress If false, NULL elements will be inserted for empty array
+ * elements.
  */
 LinkedList *array_to_linked_list(void **array, int size, bool compress)
 {
@@ -132,4 +137,21 @@ LinkedList *array_to_linked_list(void **array, int size, bool compress)
 
     reverse_linked_list(ret);
     return ret;
+}
+
+
+/**
+ * Checks whether an element is in a linked list.
+ */
+bool is_in_linked_list(LinkedList *list, void *element)
+{
+    LinkedListNode *cur = list->head;
+
+    while (cur != NULL) {
+        if (cur->element == element)
+            return true;
+        cur = cur->next;
+    }
+
+    return false;
 }

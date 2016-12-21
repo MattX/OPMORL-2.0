@@ -11,7 +11,36 @@
 #include "opmorl.h"
 
 // Maximum height of full screen windows like inventory selection
-#define WINDOW_HEIGHT 18
+#define WINDOW_HEIGHT LEVEL_HEIGHT
+
+
+const char a[] = "a";
+const char an[] = "an";
+
+/**
+ * Returns 'a' or 'an' depending on which is appropriate before the given word.
+ */
+const char *indefinite_article(const char *for_word)
+{
+    size_t len = strlen(for_word);
+
+    if (len == 0)
+        return a;
+
+    char first = for_word[0];
+    char second = len >= 2 ? for_word[1] : (char) '\0';
+
+    if (first == 'a' || first == 'i' || first == 'o' || first == 'u' ||
+        first == 'y')
+        return an;
+    else if (len >= 1 && first == 'e') {
+        if (len >= 2 && second == 'u')
+            return a;
+        else
+            return an;
+    } else
+        return a;
+}
 
 
 /**
@@ -95,6 +124,8 @@ void display_map()
     LinkedListNode *obj_node = o_list->head;
     LinkedListNode *mon_node = m_list->head;
 
+    bool flooded = (bool) (dlvl_flags[rodney.dlvl] & DFLAGS_FLOODED);
+
     for (int i = 0; i < LEVEL_HEIGHT; i++) {
         for (int j = 0; j < LEVEL_WIDTH; j++) {
             char glyph;
@@ -108,8 +139,9 @@ void display_map()
                 attron(A_BOLD);
 
             TileType tile = maps[rodney.dlvl][i][j];
+            int color = flooded ? CLR_BLUE : tile_types[tile].color;
 
-            attron(COLOR_PAIR(tile_types[tile].color));
+            attron(COLOR_PAIR(color));
             if (tile == T_DOOR_OPEN)
                 glyph = select_door_glyph(rodney.dlvl, (Coord) {i, j});
             else if (tile == T_PIPE)
@@ -117,7 +149,7 @@ void display_map()
             else
                 glyph = tile_types[tile].sym;
             mvaddch(i + 1, j, glyph);
-            attroff(COLOR_PAIR(tile_types[tile].color));
+            attroff(COLOR_PAIR(color));
 
             if (visibility_map[rodney.dlvl][i][j] == TS_SEEN)
                 attroff(A_BOLD);
@@ -126,7 +158,8 @@ void display_map()
 
     attroff(COLOR_PAIR(DEFAULT));
     /* Objects */
-    // TODO: add memory for object positions
+    /* TODO: add memory for object positions (?) objects can't move except
+     * if the player moves them. */
     if (obj_node)
         do {
             Object *obj = (Object *) obj_node->element;
@@ -162,6 +195,9 @@ void display_map()
 }
 
 
+/**
+ * Displays a map of the connected components on screen.
+ */
 void display_cc_map(int *components)
 {
     for (int i = 0; i < LEVEL_HEIGHT; i++) {
@@ -170,8 +206,8 @@ void display_cc_map(int *components)
             char glyph;
 
             if (val < 0) glyph = '-';
-            else if (val < 10) glyph = '0' + val;
-            else if (val < 36) glyph = 'A' + val - 10;
+            else if (val < 10) glyph = '0' + (char) val;
+            else if (val < 36) glyph = 'A' + (char) val - 10;
             else glyph = 'x';
 
             mvaddch(i + 1, j, glyph);
@@ -297,10 +333,18 @@ bool yes_no(char *format, ...)
  */
 bool get_point(Coord *selected)
 {
+    static Coord last_coord = {0, 0};
+    static int last_dlvl = -1;
+
     pline("Move cursor with movement keys. Use . , : or space to confirm, ESC to cancel.");
     line_needs_confirm = 0;
 
-    Coord cur = rodney.pos;
+    Coord cur;
+    if (last_dlvl == rodney.dlvl) {
+        cur = last_coord;
+    } else {
+        cur = rodney.pos;
+    }
 
     move(cur.x + 1, cur.y);
     curs_set(2);
@@ -315,12 +359,12 @@ bool get_point(Coord *selected)
         case ',':
         case ' ':
         case ':':
+            last_dlvl = rodney.dlvl;
+            last_coord = cur;
             status = 1;
             break;
         case 27: // Alt or esc
-            if (getch() == -1) {
-                status = 2;
-            }
+            status = 2;
             break;
         case 'h':
         case 'j':
@@ -348,35 +392,42 @@ bool get_point(Coord *selected)
 // TODO: object selection window for several objects
 
 /**
- * Selects the next node with non-null element. If skipped is not none, if will
- * be incremented by the number of skipped elements
+ * Selects the next node with non-null element.
+ * @param skipped If not NULL, will be set to the number of skipped elements.
  */
 LinkedListNode *find_not_null(LinkedListNode *node, int *skipped)
 {
     while (node != NULL && node->element == NULL) {
         node = node->next;
         if (skipped != NULL)
-            *skipped += 1;
+            (*skipped)++;
     }
 
     return node;
 }
 
-/*
- * Displays an object selection window for one object. There may be NULL
- * elements in the linked list, corresponding to empty slots from the inventory
- * or a container.
+
+/**
+ * Displays an object selection window for one or several objects.
+ * @param objects A linked list from which to pick objects. There can be NULL
+ * elements in the list, corresponding to empty slots in an object array.
+ * @param allow_multiple Whether to allow the player to select multiple
+ * objects. If set to false, the returned list is guaranteed to contain
+ * zero or one element.
+ * @return A linked list of selected objects.
  */
-Object *select_object(LinkedList *objects)
+LinkedList *select_objects(LinkedList *objects, bool allow_multiple)
 {
     LinkedListNode *top = NULL; // Which object is the first on the current page
     LinkedListNode *next_top = objects->head; // Which object is the first on the next page
     LinkedListNode *cur = NULL;
-    Object *selected = NULL;
+    LinkedList *selected = new_linked_list();
     int slot = -1;
     int non_null_i = 0;
+    bool confirmed = false;
 
-    while (selected == NULL) {
+    while (!confirmed) {
+        clear_msg_line();
         top = next_top;
         cur = find_not_null(top, &non_null_i);
 
@@ -384,7 +435,8 @@ Object *select_object(LinkedList *objects)
             if (cur == NULL)
                 break;
 
-            mvprintw(i + 1, 0, "%c - a %s", slot_to_letter(non_null_i),
+            mvprintw(i + 1, 0, "%c - %s %s", slot_to_letter(non_null_i),
+                     indefinite_article(object_name((Object *) cur->element)),
                      object_name((Object *) cur->element));
             if (cur->element == rodney.wielded)
                 printw(" (wielded)");
@@ -400,34 +452,73 @@ Object *select_object(LinkedList *objects)
         next_top = cur;
 
         if (next_top != NULL)
-            mvprintw(getcury(stdscr) + 1, 0,
-                     "<space> for next page, - to cancel");
+            pline("<space> for next page, <enter> to confirm, <esc> to cancel");
         else
-            mvprintw(getcury(stdscr) + 1, 0, "- to cancel");
+            pline("<space> or <enter> to confirm, <esc> to cancel");
         clrtoeol();
 
         while (1) {
             int selection = get_input();
-            if (selection == '-')
-                return NULL;
-            else if (selection == ' ' && next_top != NULL)
-                break;
-            else if ((slot = letter_to_slot((char) selection)) != -1) {
+            if (selection == 27) {
+                // ESC pressed, return an empty list.
+                delete_linked_list(selected);
+                return new_linked_list();
+            } else if (selection == 10) {
+                return selected;
+            } else if (selection == ' ') {
+                if (next_top != NULL)
+                    break;
+                else
+                    return selected;
+            } else if ((slot = letter_to_slot((char) selection)) != -1) {
                 cur = top;
-                for (int i = 0; i < slot && cur != NULL; i++)
+                int i_item;
+                for (i_item = 0; i_item < slot && cur != NULL; i_item++)
                     cur = cur->next;
 
                 if (cur != NULL) {
-                    selected = cur->element;
-                    break;
+                    if (allow_multiple) {
+                        if (!is_in_linked_list(selected, cur->element)) {
+                            add_to_linked_list(selected, cur->element);
+                            mvaddch(i_item + 1, 2, '+');
+                        } else {
+                            delete_from_linked_list(selected, cur->element);
+                            mvaddch(i_item + 1, 2, '-');
+                        }
+                        continue;
+                    } else {
+                        add_to_linked_list(selected, cur->element);
+                        confirmed = true;
+                        break;
+                    }
                 } else
                     pline("You don't have item %c.", selection);
             } else
-                pline("Invalid command.");
+                pline("?");
         }
     }
 
     return selected;
+}
+
+/*
+ * Displays an object selection window for one object. There may be NULL
+ * elements in the linked list, corresponding to empty slots from the inventory
+ * or a container.
+ */
+Object *select_object(LinkedList *objects)
+{
+    LinkedList *selected = select_objects(objects, false);
+    Object *ret;
+
+    if (is_empty(selected)) {
+        ret = NULL;
+    } else {
+        ret = (Object *) selected->head->element;
+    }
+
+    delete_linked_list(selected);
+    return ret;
 }
 
 
@@ -550,3 +641,30 @@ void display_layout()
     get_input();
     display_everything();
 }
+
+
+#ifdef DEBUG
+
+/**
+ * Testing function for multiple selection
+ */
+void test_multiple_selection()
+{
+    LinkedList *inv_list = array_to_linked_list((void **) rodney.inventory,
+                                                INVENTORY_SIZE, false);
+    LinkedList *selected = select_objects(inv_list, true);
+    delete_linked_list(inv_list);
+
+    pline("You selected:");
+
+    if (is_empty(selected)) {
+        pline("<Nothing>");
+    } else {
+        for (LinkedListNode *cur = selected->head; cur != NULL; cur = cur->next)
+            pline("%s,", object_name((Object *) cur->element));
+    }
+
+    delete_linked_list(selected);
+}
+
+#endif

@@ -20,6 +20,7 @@ void system_init()
     cbreak();
 	keypad(stdscr, TRUE);
 	noecho();
+    set_escdelay(25);
 
     define_colors();
     line_needs_confirm = 0;

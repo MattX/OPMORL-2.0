@@ -101,7 +101,8 @@ int pickup()
             delete_from_linked_list(o_list, ret);
             free(ret);
         } else if ((slot = add_to_inventory(ret)) != -1) {
-            pline("%c - a %s.", slot_to_letter(slot), object_name(ret));
+            pline("%c - %s %s.", slot_to_letter(slot),
+                  indefinite_article(object_name(ret)), object_name(ret));
             delete_from_linked_list(o_list, ret);
             elapsed = 1;
         } else

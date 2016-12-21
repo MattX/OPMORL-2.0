@@ -31,8 +31,7 @@ int use_object(Object *object)
     IF_HAS(object, MT_US_LEVELPORT)
         int new_level = max(min(rand_int(rodney.dlvl - 2, rodney.dlvl + 2), 0),
                             DLVL_MAX - 1);
-        // TODO: use a different function
-        change_dlvl(new_level, T_STAIRS_DOWN);
+        change_dlvl(new_level, -1);
     }
     IF_HAS(object, MT_US_DIG)
         pline("In which direction [hjklyubn>]?");
@@ -62,7 +61,7 @@ int use_object(Object *object)
         delete_linked_list(inv);
 
         if (to_use != NULL) {
-            to_use->enchant += rand_int(0, 2);
+            to_use->enchant += rand_int(1, 100) <= 10 ? 2 : 1;
         } else {
             pline("Never mind.");
         }
@@ -72,8 +71,13 @@ int use_object(Object *object)
     }
 
     if (found_mixin) {
-        if (object->type->class->o_class_flag == OT_POTION)
+        if (object->type->class->o_class_flag == OT_POTION) {
             object->uses_left -= 1;
+            if (object->uses_left == 0) {
+                pline("The %s is exhausted.", object_name(object));
+
+            }
+        }
         return 1;
     } else {
         pline("This object can't be used!");

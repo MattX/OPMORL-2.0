@@ -609,6 +609,12 @@ int teleport();
 
 void display_layout();
 
+void test_multiple_selection();
+
+LinkedList *select_objects(LinkedList *, bool);
+
+const char *indefinite_article(const char *for_word);
+
 /* Globals */
 
 enum e_dungeon_level_type dlvl_types[DLVL_MAX];

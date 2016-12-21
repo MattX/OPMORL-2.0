@@ -107,14 +107,17 @@ void process_turn(char c)
     case 'E':
         turn_elapsed = teleport();
         break;
+#ifdef DEBUG
     case 'L':
         if (god_mode)
             display_layout();
         break;
-#ifdef DEBUG
     case 'G':
         god_mode = !god_mode;
         pline("God mode %s.", god_mode ? "enabled" : "disabled");
+        break;
+    case 'S':
+        test_multiple_selection();
         break;
 #endif
     case 'R':

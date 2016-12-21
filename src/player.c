@@ -100,13 +100,14 @@ int change_dlvl(int to_dlvl, int tile_type)
 {
     Coord new;
     int found_tile;
+    bool using_stairs = tile_type >= 0 && tile_type < NB_TILE_TYPES;
 
     if (to_dlvl < 0 || to_dlvl >= DLVL_MAX) {
         pline("A mysterious force prevents you from passing.");
         return 0;
     }
 
-    if (tile_type < 0 || tile_type > NB_TILE_TYPES) {
+    if (!using_stairs) {
         found_tile = find_closest(&new, to_dlvl, rodney.pos, false, -1);
     } else {
         found_tile = find_tile(&new, to_dlvl, false, tile_type);
@@ -119,7 +120,7 @@ int change_dlvl(int to_dlvl, int tile_type)
     }
 
     if (!found_tile) {
-        if (tile_type < 0 || tile_type > NB_TILE_TYPES) {
+        if (!using_stairs) {
             pline("You are kicked back up by a mysterious force.");
         } else {
             if (find_mon_at(to_dlvl, new))
@@ -131,12 +132,22 @@ int change_dlvl(int to_dlvl, int tile_type)
         return 0;
     }
 
+    if (dlvl_flags[to_dlvl] & DFLAGS_FLOODED &&
+        !(dlvl_flags[rodney.dlvl] & DFLAGS_FLOODED) &&
+        using_stairs) {
+        pline("After a few steps, the staircase is submerged in water.");
+        bool confirm = yes_no("The level below seems to be flooded. "
+                                      "Try to swim down?");
+        if (!confirm)
+            return 0;
+    }
+
     rodney.dlvl = to_dlvl;
     rodney.pos = new;
 
     if (!visited[rodney.dlvl]) {
         visited[rodney.dlvl] = true;
-        //make_monsters(rodney.dlvl, -1);
+        make_monsters(rodney.dlvl, -1);
     }
 
     return 1;
@@ -282,9 +293,12 @@ void take_damage(int damage)
 
     if (rodney.hp < 0) {
         pline("You die...");
-#ifndef DEBUG
-        exit_game();
-#endif
+        if (!god_mode)
+            exit_game();
+        else {
+            pline("But, being a god, you immediately reincarnate");
+            rodney.hp = rodney.max_hp;
+        }
     }
 }
 

@@ -18,8 +18,9 @@ typedef struct s_linked_list_node {
 } LinkedListNode;
 
 
-/*
- * Linked list structure to simplify adding/removing elements from an empty list.
+/**
+ * Linked list structure to simplify adding/removing elements from an empty
+ * list (since head can easily be changed).
  */
 typedef struct {
     LinkedListNode *head;
@@ -40,5 +41,6 @@ int delete_from_linked_list(LinkedList *linked_list, void *item);
 
 LinkedList *array_to_linked_list(void **array, int size, bool compress);
 
+bool is_in_linked_list(LinkedList *list, void *element);
 
 #endif //OPMORL_2_0_LINKEDLIST_H

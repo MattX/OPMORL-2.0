@@ -7,10 +7,6 @@
  *
  */
 
-/* Same remarks apply for monsters that the ones in object.c
- * No way. You dont need the player to hold monsters thus you only need 
- */
-
 #include "opmorl.h"
 
 #define MONSTER(tag, nam, mc, mhp, ac, atk, pow, lev, sym, bold, prob) \
@@ -338,13 +334,15 @@ void move_monsters()
         if (mon->type->atk_types & ATK_NO_MOVE)
             continue;
 
-        if (!is_visible(rodney.dlvl, mon->pos, rodney.pos, NULL, false)) {
-            if (mon->remembered && mon->pos.x == mon->remembered_pos.x &&
-                mon->pos.y == mon->remembered_pos.y) {
+        // Update remembered position
+        if (!is_visible(mon->dlvl, mon->pos, rodney.pos, NULL, false)) {
+            if (mon->remembered &&
+                is_visible(mon->dlvl, mon->pos, mon->remembered_pos, NULL,
+                           false) &&
+                mon->remembered_pos.x != rodney.pos.x &&
+                mon->remembered_pos.y != rodney.pos.y) {
                 mon->remembered = false;
             }
-            if (!mon->remembered)
-                continue;
 
             target = mon->remembered_pos;
         } else {
@@ -353,10 +351,20 @@ void move_monsters()
             target = rodney.pos;
         }
 
-        /* First try finding a path clear of monsters; if it fails, try to
-         * find a path with monsters */
-        if (dijkstra(rodney.dlvl, mon->pos, target, &new, false) ||
-            dijkstra(rodney.dlvl, mon->pos, target, &new, true)) {
+        if (!mon->remembered) {
+            int direction = rand_int(0, 7);
+            Coord tentative = get_neighbor(mon->pos, direction);
+            if (valid_coordinates(tentative) &&
+                IS_WALKABLE(maps[mon->dlvl][tentative.x][tentative.y]) &&
+                !find_mon_at(mon->dlvl, tentative)) {
+                mon->pos = tentative;
+            }
+        }
+
+            /* First try finding a path clear of monsters; if it fails, try to
+             * find a path with monsters */
+        else if (dijkstra(rodney.dlvl, mon->pos, target, &new, false) ||
+                 dijkstra(rodney.dlvl, mon->pos, target, &new, true)) {
             if (new.x == rodney.pos.x && new.y == rodney.pos.y) {
                 mon_attack_melee(mon);
             } else if (!find_mon_at(rodney.dlvl, new)) {

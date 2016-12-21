@@ -488,10 +488,10 @@ static bool can_walk_blob(bool *blob, int height, int width, Coord blob_pos,
  * @param dlvl The level on which to perform the calculation
  * @param from The coordinates of the source point
  * @param to The coordinates of the destination point
- * @param monsters_block If set to true, monsters will count as unwalkable
- * (opaque) tiles. This is useful for ranged weapons calculation.
  * @param block Pointers that will be updated with the coordinates
  * of the blocking tile (if not set to NULL).
+ * @param monsters_block If set to true, monsters will count as unwalkable
+ * (opaque) tiles. This is useful for ranged weapons calculation.
  * @return whether the tile is visible
  */
 bool
