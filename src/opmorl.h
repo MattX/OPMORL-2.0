@@ -19,7 +19,7 @@
 #include <stdbool.h>
 #include <curses.h>
 
-#include "linkedlist.h"
+#include "lib.h"
 
 #define DEBUG
 
@@ -70,15 +70,6 @@ typedef enum e_color
  * init_color, and then we just have, before printing a monster/object, to call
  * attron(COLOR_PAIR(obj->color)); and attroff().	*/
 
-
-/**
- * Stores a coordinate
- */
-typedef struct s_coord
-{
-    int x; /** x coordinate */
-    int y; /** y coordinate */
-} Coord;
 
 /****** OBJECTS & object mixins ******/
 
@@ -502,22 +493,6 @@ Monster *find_mon_at(int, Coord);
 
 LinkedList *find_objs_at(int, Coord);
 
-int rand_int(int, int);
-
-int ndn(int, int);
-
-int min(int, int);
-
-int max(int, int);
-
-int sign(int);
-
-int abs(int);
-
-double abs_d(double);
-
-void strncpy_pad(char *dest, const char *src, size_t n);
-
 int move_rodney(Coord to);
 
 int use_stairs(bool);
@@ -584,11 +559,7 @@ bool load_grid();
 
 void generate_level(int dlvl);
 
-Coord letter_to_direction(char);
-
 Coord get_direction();
-
-Coord coord_add(Coord, Coord);
 
 int toggle_door(Coord direction, bool open);
 
