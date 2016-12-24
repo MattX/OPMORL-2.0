@@ -13,7 +13,6 @@
 // Maximum height of full screen windows like inventory selection
 #define WINDOW_HEIGHT LEVEL_HEIGHT
 
-
 const char a[] = "a";
 const char an[] = "an";
 
@@ -45,7 +44,6 @@ const char *indefinite_article(const char *for_word)
 
 /**
  * Get one key of player input
- * @return The pressed key
  */
 char get_input()
 {
@@ -158,8 +156,10 @@ void display_map()
 
     attroff(COLOR_PAIR(DEFAULT));
     /* Objects */
-    /* TODO: add memory for object positions (?) objects can't move except
-     * if the player moves them. */
+    /* TODO: add memory for object positions
+     * -> objects can't move unless the player moves as well, but no memory
+     *    also means that revealing the map will reveal the positions of all
+     *    objects on the level. */
     if (obj_node)
         do {
             Object *obj = (Object *) obj_node->element;
@@ -501,7 +501,7 @@ LinkedList *select_objects(LinkedList *objects, bool allow_multiple)
     return selected;
 }
 
-/*
+/**
  * Displays an object selection window for one object. There may be NULL
  * elements in the linked list, corresponding to empty slots from the inventory
  * or a container.
@@ -523,8 +523,8 @@ Object *select_object(LinkedList *objects)
 
 
 /*
- * select_from_inv: Ask the player an object from the player inventory. Returns
- * NULL if the selection is cancelled.
+ * Ask the player to select an object from the player inventory. Returns NULL
+ * if the selection is cancelled.
  * TODO: allow restricting selection to some types only.
  */
 Object *select_from_inv(int possible_types)

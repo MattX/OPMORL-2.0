@@ -29,7 +29,7 @@ void add_montype(int *mon_ptr, MonTypeTag tag, char *name,
     monster_types[*mon_ptr].magic_class = magic_class;
     monster_types[*mon_ptr].max_hp = max_hp;
     monster_types[*mon_ptr].ac = ac;
-    monster_types[*mon_ptr].atk_types = atk_types;
+    monster_types[*mon_ptr].flags = atk_types;
     monster_types[*mon_ptr].difficulty = level;
     monster_types[*mon_ptr].symbol = symbol;
     monster_types[*mon_ptr].prob = prob;
@@ -47,126 +47,163 @@ void init_monster_types()
     int monster_pointer = 0;
 
     /* Name, Magic Class, HP, AC, Attacks, Power, Level, Symbol, Probability */
-    MONSTER(MON_RAT, "rat", MC_NEUTRAL, 3, 5, ATK_MELEE, 3, 1, 'r', false, 80);
-    MONSTER(MON_SEWER_RAT, "sewer rat", MC_NEUTRAL, 4, 5, ATK_MELEE, 3, 1, 'r',
+    MONSTER(MON_RAT, "rat", MC_NEUTRAL, 3, 5, MTFLAG_ATK_MELEE, 3, 1, 'r',
+            false, 80);
+    MONSTER(MON_SEWER_RAT, "sewer rat", MC_NEUTRAL, 4, 5, MTFLAG_ATK_MELEE, 3,
+            1, 'r',
             true, 80);
-    MONSTER(MON_CHAMELEON, "chameleon", MC_ILLU, 10, 6, ATK_MELEE | ATK_INVIS,
+    MONSTER(MON_CHAMELEON, "chameleon", MC_EVOK, 10, 6,
+            MTFLAG_ATK_MELEE | MTFLAG_INVIS,
             0, 3, 'c', false, 20);
-    MONSTER(MON_HOUND, "hound", MC_EXOR, 15, 4, ATK_MELEE, 4, 2, 'h', false,
-            80);
-    MONSTER(MON_DEATH_HOUND, "death hound", MC_NECRO, 15, 4, ATK_MELEE, 4, 2,
-            'h', false, 80);
-    MONSTER(MON_PATRONUS, "patronus", MC_TRANS, 15, 4, ATK_MELEE | ATK_POLYSELF,
-            4, 5, 'h', false, 20);
-    MONSTER(MON_FOX, "fox", MC_NEUTRAL, 15, 4, ATK_MELEE, 4, 2, 'f', false, 80);
-    MONSTER(MON_BEAR, "bear", MC_NEUTRAL, 35, 3, ATK_MELEE, 6, 4, 'b', false,
-            80);
-    MONSTER(MON_CAVE_BEAR, "cave bear", MC_NEUTRAL, 40, 3, ATK_MELEE, 8, 5, 'b',
-            true, 40);
-    MONSTER(MON_CRAB, "crab", MC_NEUTRAL, 15, 3, ATK_MELEE, 3, 2, 'c', true,
-            80);
-    MONSTER(MON_HORSESHOE_CRAB, "horseshoe crab", MC_NEUTRAL, 5, -1, ATK_MELEE,
-            1, 1, 'c', false, 80);
-    MONSTER(MON_TROLL, "troll", MC_NEUTRAL, 50, 1, ATK_MELEE, 12, 8, 'T', false,
-            80);
-    MONSTER(MON_FROST_TROLL, "frost troll", MC_NEUTRAL, 40, 1,
-            ATK_MELEE | ATK_FREEZE, 10, 8, 'T', true, 40);
-    MONSTER(MON_GOBLIN, "goblin", MC_NEUTRAL, 18, 3, ATK_MELEE, 4, 3, 'g',
-            false, 80);
-    MONSTER(MON_HOBGOBLIN, "hobgoblin", MC_NEUTRAL, 25, 3, ATK_MELEE, 4, 3, 'g',
-            true, 80);
-    MONSTER(MON_FLOATING_EYE, "floating eye", MC_TRANS, 15, 3, 0, 0, 5, 'e',
-            true, 20);
-    MONSTER(MON_LICH, "lich", MC_NECRO, 40, 0, ATK_MELEE | ATK_RAY, 7, 7, 'L',
-            false, 80);
-    MONSTER(MON_ARCH_LICH, "fucking arch-lich", MC_NECRO, 60, -1,
-            ATK_MELEE | ATK_RAY | ATK_LIFEFORCE | ATK_EXPDRAIN, 10, 15, 'L',
-            true, 2);
-    MONSTER(MON_UNDEAD_GOLEM, "undead golem", MC_NECRO, 30, 2, ATK_MELEE, 6, 5,
-            'G', false, 80);
-    MONSTER(MON_SHINY_GOLEM, "shiny golem", MC_ILLU, 30, 2, ATK_MELEE, 6, 5,
-            'G', false, 80);
-    MONSTER(MON_CONJURING_GOLEM, "conjuring golem", MC_EXOR, 30, 2, ATK_MELEE,
-            6, 5,
-            'G', false, 80);
-    MONSTER(MON_CHANGING_GOLEM, "changing golem", MC_TRANS, 30, 2, ATK_MELEE, 6,
-            5,
-            'G', false, 80);
-    MONSTER(MON_DEMON, "demon", MC_NECRO, 20, 4, ATK_MELEE, 4, 2, 'd', false,
-            80);
-    MONSTER(MON_DEMON_LORD, "demon lord", MC_NECRO, 30, 2, ATK_MELEE, 7, 5, 'D',
-            false, 80);
-    MONSTER(MON_DEMON_KING, "demon king", MC_NECRO, 50, 0,
-            ATK_MELEE | ATK_LIFEFORCE, 9, 11, 'D', true, 80);
-    MONSTER(MON_ANGEL, "anglel", MC_EXOR, 30, 0, ATK_MELEE | ATK_TP, 6, 7, 'A',
-            false, 20);
-    MONSTER(MON_ARCHANGEL, "archangel", MC_EXOR, 35, -1,
-            ATK_MELEE | ATK_TP | ATK_TIMEOUT, 10, 13, 'A', true, 20);
-    MONSTER(MON_LESSER_MINION, "lesser minion", MC_NECRO, 20, 4, ATK_MELEE, 4,
-            2, 'm', false, 80);
-    MONSTER(MON_MINION, "minion", MC_NECRO, 30, 2, ATK_MELEE, 7, 5, 'M', false,
-            80);
-    MONSTER(MON_GREATER_MINION, "greater minion", MC_NECRO, 50, 0,
-            ATK_MELEE | ATK_LIFEFORCE, 9, 11, 'M', true, 80);
-    MONSTER(MON_TT, "tt", MC_NECRO, 75, -6,
-            ATK_MELEE | ATK_RAY | ATK_LIFEFORCE | ATK_EXPDRAIN, 15, 25, '@',
-            true, 0);
-    MONSTER(MON_ESTEBAN, "esteban", MC_ILLU, 75, -6,
-            ATK_MELEE | ATK_RAY | ATK_TP | ATK_INVIS, 15, 25, '@', true, 0);
-    MONSTER(MON_CHARLES, "charles", MC_EVOK, 75, -6,
-            ATK_MELEE | ATK_RAY | ATK_EVOKE | ATK_CONJURE, 15, 25, '@', true,
-            0);
-    MONSTER(MON_ZALE, "zale", MC_EXOR, 75, -6,
-            ATK_MELEE | ATK_RAY | ATK_DISENCHANT | ATK_TIMEOUT, 15, 25, '@',
-            true, 0);
-    MONSTER(MON_ODYSSEUS, "odysseus", MC_TRANS, 75, -6,
-            ATK_MELEE | ATK_RAY | ATK_DESTROY | ATK_POLYSELF, 15, 25, '@', true,
-            0);
-    MONSTER(MON_GREEN_DRAGON, "green dragon", MC_EVOK, 50, -2,
-            ATK_MELEE | ATK_RAY | ATK_CONJURE, 15, 13, 'D', true, 0);
-    MONSTER(MON_CYAN_DRAGON, "cyan dragon", MC_NECRO, 50, -2,
-            ATK_MELEE | ATK_RAY | ATK_EXPDRAIN, 15, 13, 'D', true, 0);
-    MONSTER(MON_RED_DRAGON, "red dragon", MC_TRANS, 50, -2,
-            ATK_MELEE | ATK_RAY | ATK_POLYSELF, 15, 25, 'D', true,
-            0);
-    MONSTER(MON_YELLOW_DRAGON, "yellow dragon", MC_ILLU, 50, -2,
-            ATK_MELEE | ATK_RAY | ATK_INVIS, 15, 25, 'D',
-            true, 0);
-    MONSTER(MON_BLUE_DRAGON, "blue dragon", MC_EXOR, 50, -2,
-            ATK_MELEE | ATK_RAY | ATK_TIMEOUT, 15, 25, 'D', true,
-            0);
-    MONSTER(MON_WIZARD_OF_YENDOR, "Wizard of Yendor", MC_ILLU, 100, -5,
-            ATK_MELEE | ATK_TP | ATK_BLOWBACK | ATK_RAY, 15, 21, '@', false, 0);
-    MONSTER(MON_SPIRIT, "spirit", MC_EXOR, 20, 4, ATK_MELEE | ATK_RAY, 4,
-            2, 'm', false, 80);
-    MONSTER(MON_HIGHER_SPIRIT, "higher spirit", MC_EXOR, 30, 2,
-            ATK_MELEE | ATK_RAY, 7, 5, 'S', false,
-            80);
-    MONSTER(MON_GHOST, "ghost", MC_EXOR, 50, 0,
-            ATK_MELEE | ATK_LIFEFORCE | ATK_TIMEOUT, 9, 11, 'S', true, 80);
-    MONSTER(MON_ELF, "elf", MC_ILLU, 20, 4, ATK_MELEE, 4,
-            2, 'e', false, 80);
-    MONSTER(MON_ELF_LORD, "elf lord", MC_ILLU, 30, 2, ATK_MELEE, 7, 5, 'E',
+    MONSTER(MON_HOUND, "hound", MC_PALLADIN, 15, 4, MTFLAG_ATK_MELEE, 4, 2, 'h',
             false,
             80);
-    MONSTER(MON_ELF_KING, "elf king", MC_ILLU, 50, 0,
-            ATK_MELEE | ATK_TP, 9, 11, 'E', true, 80);
-    MONSTER(MON_DWARF, "dwarf", MC_EVOK, 20, 4, ATK_MELEE, 4,
+    MONSTER(MON_DEATH_HOUND, "death hound", MC_NECRO, 15, 4, MTFLAG_ATK_MELEE,
+            4, 2,
+            'h', false, 80);
+    MONSTER(MON_PATRONUS, "patronus", MC_EVOK, 15, 4,
+            MTFLAG_ATK_MELEE | MTFLAG_ATK_POLYSELF,
+            4, 5, 'h', false, 20);
+    MONSTER(MON_FOX, "fox", MC_NEUTRAL, 15, 4, MTFLAG_ATK_MELEE, 4, 2, 'f',
+            false, 80);
+    MONSTER(MON_BEAR, "panserbjørn", MC_PALLADIN, 35, 3, MTFLAG_ATK_MELEE, 6, 4,
+            'b', false,
+            80);
+    MONSTER(MON_CAVE_BEAR, "cave bear", MC_PALLADIN, 40, 3, MTFLAG_ATK_MELEE, 8,
+            5, 'b',
+            true, 40);
+    MONSTER(MON_CRAB, "crab", MC_NEUTRAL, 15, 3, MTFLAG_ATK_MELEE, 3, 2, 'c',
+            true,
+            80);
+    MONSTER(MON_HORSESHOE_CRAB, "horseshoe crab", MC_NEUTRAL, 5, -1,
+            MTFLAG_ATK_MELEE,
+            1, 1, 'c', false, 80);
+    MONSTER(MON_TROLL, "troll", MC_NEUTRAL, 50, 1, MTFLAG_ATK_MELEE, 12, 8, 'T',
+            false,
+            80);
+    MONSTER(MON_FROST_TROLL, "frost troll", MC_NEUTRAL, 40, 1,
+            MTFLAG_ATK_MELEE | MTFLAG_ATK_FREEZE, 10, 8, 'T', true, 40);
+    MONSTER(MON_GOBLIN, "goblin", MC_NEUTRAL, 18, 3, MTFLAG_ATK_MELEE, 4, 3,
+            'g',
+            false, 80);
+    MONSTER(MON_HOBGOBLIN, "hobgoblin", MC_NEUTRAL, 25, 3, MTFLAG_ATK_MELEE, 4,
+            3, 'g',
+            true, 80);
+    MONSTER(MON_FLOATING_EYE, "floating eye", MC_EVOK, 15, 3, 0, 0, 5, 'e',
+            true, 20);
+    MONSTER(MON_LICH, "lich", MC_NECRO, 40, 0,
+            MTFLAG_ATK_MELEE | MTFLAG_ATK_RAY, 7, 7, 'L',
+            false, 80);
+    MONSTER(MON_ARCH_LICH, "fucking arch-lich", MC_NECRO, 60, -1,
+            MTFLAG_ATK_MELEE | MTFLAG_ATK_RAY | MTFLAG_ATK_DRAIN_LIFEFORCE |
+            MTFLAG_ATK_EXPDRAIN, 10, 15, 'L',
+            true, 2);
+    MONSTER(MON_UNDEAD_GOLEM, "undead golem", MC_NECRO, 30, 2, MTFLAG_ATK_MELEE,
+            6, 5,
+            'G', false, 80);
+    MONSTER(MON_SHINY_GOLEM, "shiny golem", MC_EVOK, 30, 2, MTFLAG_ATK_MELEE, 6,
+            5,
+            'G', false, 80);
+    MONSTER(MON_CONJURING_GOLEM, "conjuring golem", MC_PALLADIN, 30, 2,
+            MTFLAG_ATK_MELEE,
+            6, 5,
+            'G', false, 80);
+    MONSTER(MON_DEMON, "demon", MC_NECRO, 20, 4, MTFLAG_ATK_MELEE, 4, 2, 'd',
+            false,
+            80);
+    MONSTER(MON_DEMON_LORD, "demon lord", MC_NECRO, 30, 2, MTFLAG_ATK_MELEE, 7,
+            5, 'D',
+            false, 80);
+    MONSTER(MON_DEMON_KING, "demon king", MC_NECRO, 50, 0,
+            MTFLAG_ATK_MELEE | MTFLAG_ATK_DRAIN_LIFEFORCE, 9, 11, 'D', true,
+            80);
+    MONSTER(MON_ANGEL, "angel", MC_PALLADIN, 30, 0,
+            MTFLAG_ATK_MELEE | MTFLAG_ATK_TP, 6, 7, 'A',
+            false, 20);
+    MONSTER(MON_ARCHANGEL, "archangel", MC_PALLADIN, 35, -1,
+            MTFLAG_ATK_MELEE | MTFLAG_ATK_TP | MTFLAG_ATK_TIMEOUT, 10, 13, 'A',
+            true, 20);
+    MONSTER(MON_LESSER_MINION, "lesser minion", MC_NECRO, 20, 4,
+            MTFLAG_ATK_MELEE, 4,
+            2, 'm', false, 80);
+    MONSTER(MON_MINION, "minion", MC_NECRO, 30, 2, MTFLAG_ATK_MELEE, 7, 5, 'M',
+            false,
+            80);
+    MONSTER(MON_GREATER_MINION, "greater minion", MC_NECRO, 50, 0,
+            MTFLAG_ATK_MELEE | MTFLAG_ATK_DRAIN_LIFEFORCE, 9, 11, 'M', true,
+            80);
+    MONSTER(MON_TT, "tt", MC_NECRO, 75, -6,
+            MTFLAG_ATK_MELEE | MTFLAG_ATK_RAY | MTFLAG_ATK_DRAIN_LIFEFORCE |
+            MTFLAG_ATK_EXPDRAIN, 15, 25, '@',
+            true, 0);
+    MONSTER(MON_ESTEBAN, "esteban", MC_PALLADIN, 75, -6,
+            MTFLAG_ATK_MELEE | MTFLAG_ATK_RAY | MTFLAG_ATK_TP | MTFLAG_INVIS,
+            15, 25, '@', true, 0);
+    MONSTER(MON_CHARLES, "charles", MC_EVOK, 75, -6,
+            MTFLAG_ATK_MELEE | MTFLAG_ATK_RAY | MTFLAG_LEVITATE |
+            MTFLAG_ATK_CONJURE, 15, 25, '@', true,
+            0);
+    MONSTER(MON_ZALE, "zale", MC_PALLADIN, 75, -6,
+            MTFLAG_ATK_MELEE | MTFLAG_ATK_RAY | MTFLAG_ATK_DISENCHANT |
+            MTFLAG_ATK_TIMEOUT, 15, 25, '@',
+            true, 0);
+    MONSTER(MON_ODYSSEUS, "odysseus", MC_NECRO, 75, -6,
+            MTFLAG_ATK_MELEE | MTFLAG_ATK_RAY | MTFLAG_ATK_DESTROY, 15, 25, '@',
+            true,
+            0);
+    MONSTER(MON_GREEN_DRAGON, "green dragon", MC_EVOK, 50, -2,
+            MTFLAG_ATK_MELEE | MTFLAG_ATK_RAY | MTFLAG_ATK_CONJURE, 15, 13, 'D',
+            true, 0);
+    MONSTER(MON_CYAN_DRAGON, "cyan dragon", MC_NECRO, 50, -2,
+            MTFLAG_ATK_MELEE | MTFLAG_ATK_RAY | MTFLAG_ATK_EXPDRAIN, 15, 13,
+            'D', true, 0);
+    MONSTER(MON_RED_DRAGON, "red dragon", MC_PALLADIN, 50, -2,
+            MTFLAG_ATK_MELEE | MTFLAG_ATK_RAY, 15, 25, 'D', true,
+            0);
+    MONSTER(MON_YELLOW_DRAGON, "yellow dragon", MC_NECRO, 50, -2,
+            MTFLAG_ATK_MELEE | MTFLAG_ATK_RAY | MTFLAG_INVIS, 15, 25, 'D',
+            true, 0);
+    MONSTER(MON_BLUE_DRAGON, "blue dragon", MC_EVOK, 50, -2,
+            MTFLAG_ATK_MELEE | MTFLAG_ATK_RAY | MTFLAG_ATK_TIMEOUT, 15, 25, 'D',
+            true,
+            0);
+    MONSTER(MON_WIZARD_OF_YENDOR, "Wizard of Yendor", MC_PALLADIN, 100, -5,
+            MTFLAG_ATK_MELEE | MTFLAG_ATK_TP | MTFLAG_BLOWBACK | MTFLAG_ATK_RAY,
+            15, 21, '@', false, 0);
+    MONSTER(MON_SPIRIT, "spirit", MC_NECRO, 20, 4,
+            MTFLAG_ATK_MELEE | MTFLAG_ATK_RAY, 4,
+            2, 'm', false, 80);
+    MONSTER(MON_HIGHER_SPIRIT, "higher spirit", MC_NECRO, 30, 2,
+            MTFLAG_ATK_MELEE | MTFLAG_ATK_RAY, 7, 5, 'S', false,
+            80);
+    MONSTER(MON_GHOST, "ghost", MC_NECRO, 50, 0,
+            MTFLAG_ATK_MELEE | MTFLAG_ATK_DRAIN_LIFEFORCE | MTFLAG_ATK_TIMEOUT,
+            9, 11, 'S', true, 80);
+    MONSTER(MON_ELF, "elf", MC_PALLADIN, 20, 4, MTFLAG_ATK_MELEE, 4,
+            2, 'e', false, 80);
+    MONSTER(MON_ELF_LORD, "elf lord", MC_PALLADIN, 30, 2, MTFLAG_ATK_MELEE, 7,
+            5, 'E',
+            false,
+            80);
+    MONSTER(MON_ELF_KING, "elf king", MC_PALLADIN, 50, 0,
+            MTFLAG_ATK_MELEE | MTFLAG_ATK_TP, 9, 11, 'E', true, 80);
+    MONSTER(MON_DWARF, "dwarf", MC_EVOK, 20, 4, MTFLAG_ATK_MELEE, 4,
             2, 'd', false, 80);
-    MONSTER(MON_DWARF_LORD, "dwarf lord", MC_EVOK, 30, 2, ATK_MELEE, 7, 5, 'D',
+    MONSTER(MON_DWARF_LORD, "dwarf lord", MC_EVOK, 30, 2, MTFLAG_ATK_MELEE, 7,
+            5, 'D',
             false,
             80);
     MONSTER(MON_DWARF_KING, "dwarf king", MC_EVOK, 50, 0,
-            ATK_MELEE | ATK_TP, 9, 11, 'D', true, 80);
-    MONSTER(MON_ASMODEUS, "Asmodeus", MC_TRANS, 50, 0, ATK_MELEE | ATK_FIRE |
-                                                       ATK_POLYSELF, 9, 11, '&',
-            false, 20);
+            MTFLAG_ATK_MELEE | MTFLAG_ATK_TP, 9, 11, 'D', true, 80);
     MONSTER(MON_JUIBLEX, "Juiblex", MC_EVOK, 60, -4,
-            ATK_MELEE | ATK_RAY | ATK_FIRE, 10, 17, '&', true, 20);
+            MTFLAG_ATK_MELEE | MTFLAG_ATK_RAY | MTFLAG_ATK_FIRE, 10, 17, '&',
+            true, 20);
     MONSTER(MON_DEMOGORGON, "Demogorgon", MC_EVOK, 60, -4,
-            ATK_MELEE | ATK_EVOKE, 10, 17, '&', true, 20);
-    MONSTER(MON_ANT, "ant", MC_NEUTRAL, 13, 4, ATK_MELEE, 3, 2, 'a', false, 80);
-    MONSTER(MON_FIRE_ANT, "fire ant", MC_NEUTRAL, 13, 4, ATK_MELEE | ATK_FIRE,
+            MTFLAG_ATK_MELEE | MTFLAG_LEVITATE, 10, 17, '&', true, 20);
+    MONSTER(MON_ANT, "ant", MC_NEUTRAL, 13, 4, MTFLAG_ATK_MELEE, 3, 2, 'a',
+            false, 80);
+    MONSTER(MON_FIRE_ANT, "fire ant", MC_NEUTRAL, 13, 4,
+            MTFLAG_ATK_MELEE | MTFLAG_ATK_FIRE,
             3, 3, 'a', true, 20);
 
 
@@ -303,73 +340,94 @@ void mon_attack_melee(Monster *mon)
         pline("The %s misses!", mon->type->name);
     }
 
-    if (mon->type->atk_types & ATK_FREEZE) {
-        if (rand_int(1, 10) == 1) {
+    if (mon->type->flags & MTFLAG_ATK_FREEZE) {
+        if (rand_int(1, 10) == 3) {
             pline("The %s freezes you!", mon->type->name);
             // TODO: implement :)
         }
     }
 }
 
-/*
- * move_monsters: Move each monster on the level and get them a chance to
+
+/**
+ * Make a monster act for the turn: give it a chance to attack, or move it
+ * around the level. Monsters who see rodney or remember his position will move
+ * towards him, others will simply wander around.
+ * This function assumes the monster is able to move.
+ */
+void move_monster(Monster *mon)
+{
+    Coord target;
+    Coord new;
+
+    // Update remembered position
+    if (!is_visible(mon->dlvl, mon->pos, rodney.pos, NULL, false)) {
+        if (mon->remembered &&
+            is_visible(mon->dlvl, mon->pos, mon->remembered_pos, NULL,
+                       false) &&
+            mon->remembered_pos.x != rodney.pos.x &&
+            mon->remembered_pos.y != rodney.pos.y) {
+            mon->remembered = false;
+        }
+    } else {
+        mon->remembered = true;
+        mon->remembered_pos = rodney.pos;
+    }
+
+    if (!mon->remembered) {
+        int direction = rand_int(0, 7);
+        Coord tentative = get_neighbor(mon->pos, direction);
+        if (valid_coordinates(tentative) &&
+            IS_WALKABLE(maps[mon->dlvl][tentative.x][tentative.y]) &&
+            !find_mon_at(mon->dlvl, tentative)) {
+            mon->pos = tentative;
+        }
+
+        return;
+    } else {
+        target = mon->remembered_pos;
+    }
+
+    // Try to attack in melee
+    for (int i_direction = 0; i_direction < 8; i_direction++) {
+        Coord neighbor = get_neighbor(mon->pos, i_direction);
+        if (!valid_coordinates(neighbor))
+            continue;
+        if (neighbor.x == rodney.pos.x && neighbor.y == rodney.pos.y) {
+            mon_attack_melee(mon);
+            return;
+        }
+    }
+
+    /* First try finding a path clear of monsters; if it fails, try to
+     * find a path with monsters */
+    if (dijkstra(rodney.dlvl, mon->pos, target, &new, false) ||
+        dijkstra(rodney.dlvl, mon->pos, target, &new, true)) {
+        if (!find_mon_at(rodney.dlvl, new)) {
+            mon->pos = new;
+        }
+    }
+}
+
+
+/**
+ * Move each monster on the level and get them a chance to
  * attack. Only monsters that are on the current level, that can move,
  * and that are not frozen/etc. will do something.
- * Monsters who see rodney will move towards him, but others will simply wander
- * around.
- * TODO: add the wandering around.
  */
 void move_monsters()
 {
     LinkedListNode *cur_node;
     Monster *mon;
-    Coord target;
-    Coord new;
 
     for (cur_node = m_list->head; cur_node != NULL; cur_node = cur_node->next) {
         mon = cur_node->element;
         if (mon->dlvl != rodney.dlvl)
             continue;
 
-        if (mon->type->atk_types & ATK_NO_MOVE)
+        if (mon->flags & MF_FROZEN || mon->type->flags & MTFLAG_IMMOBILE)
             continue;
 
-        // Update remembered position
-        if (!is_visible(mon->dlvl, mon->pos, rodney.pos, NULL, false)) {
-            if (mon->remembered &&
-                is_visible(mon->dlvl, mon->pos, mon->remembered_pos, NULL,
-                           false) &&
-                mon->remembered_pos.x != rodney.pos.x &&
-                mon->remembered_pos.y != rodney.pos.y) {
-                mon->remembered = false;
-            }
-
-            target = mon->remembered_pos;
-        } else {
-            mon->remembered = true;
-            mon->remembered_pos = rodney.pos;
-            target = rodney.pos;
-        }
-
-        if (!mon->remembered) {
-            int direction = rand_int(0, 7);
-            Coord tentative = get_neighbor(mon->pos, direction);
-            if (valid_coordinates(tentative) &&
-                IS_WALKABLE(maps[mon->dlvl][tentative.x][tentative.y]) &&
-                !find_mon_at(mon->dlvl, tentative)) {
-                mon->pos = tentative;
-            }
-        }
-
-            /* First try finding a path clear of monsters; if it fails, try to
-             * find a path with monsters */
-        else if (dijkstra(rodney.dlvl, mon->pos, target, &new, false) ||
-                 dijkstra(rodney.dlvl, mon->pos, target, &new, true)) {
-            if (new.x == rodney.pos.x && new.y == rodney.pos.y) {
-                mon_attack_melee(mon);
-            } else if (!find_mon_at(rodney.dlvl, new)) {
-                mon->pos = new;
-            }
-        }
+        move_monster(mon);
     }
 }

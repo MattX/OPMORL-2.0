@@ -19,7 +19,7 @@
 #define NBUF 200
 #define BUF_SIZE 200
 
-Mixin mixins_list[MAX_MIXIN];
+Mixin mixins_list[NB_MIXIN];
 int nb_mixins;
 ObjectClass objclasses_list[MAX_OBJCLASS];
 int nb_objclass;
@@ -30,7 +30,7 @@ int buffer_index = 0;
 void add_mixin(int *position, MixinType id, int compatible_classes, char *desc,
                int prob, bool util)
 {
-    if (*position > MAX_MIXIN) {
+    if (*position > NB_MIXIN) {
         print_to_log("Tried to register too many mixins\n");
         return;
     }
