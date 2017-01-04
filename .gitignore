@@ -7,3 +7,4 @@ bin/
 opmorl.log
 heap.c
 .cmake/
+CMakeLocal.txt

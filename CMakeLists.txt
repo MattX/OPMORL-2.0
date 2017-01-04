@@ -1,11 +1,16 @@
 cmake_minimum_required(VERSION 3.3)
 project(OPMORL_2_0)
 
+include(CMakeLocal.txt OPTIONAL)
+
+if(WIN32)
+    set(PATH "C:\\MinGW")
+endif()
+
 find_package(Curses REQUIRED)
 include_directories(${CURSES_INCLUDE_DIR})
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -g -Wall")
-set(CMAKE_C_COMPILER "/usr/local/bin/gcc-6")
 
 set(SOURCE_FILES
         src/init.c
@@ -20,7 +25,8 @@ set(SOURCE_FILES
         src/linkedlist.c
         src/linkedlist.h
         src/turn.c
-        src/inv.c src/use.c)
+        src/inv.c
+        src/use.c)
 
 add_executable(opmorl ${SOURCE_FILES})
 target_link_libraries(opmorl ${CURSES_LIBRARIES} m)
