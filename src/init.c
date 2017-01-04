@@ -83,9 +83,11 @@ void exit_ncurses() {
  * Exits the game
  */
 void exit_game() {
+#ifdef DEBUG
     bool confirm = yes_no("Are you sure :) ?");
     if (!confirm)
         return;
+#endif
 
     pline("Goodbye.");
     getch();
@@ -116,7 +118,7 @@ void init_game()
     m_list = new_linked_list();
     turn = 0;
 
-    for (int i = 0; i < MAX_MIXIN; i++) {
+    for (int i = 0; i < NB_MIXIN; i++) {
         rodney.permanent_effects[i] = MT_NONE;
     }
     for (int i = 0; i < NB_MAGIC_CLASSES; i++) {

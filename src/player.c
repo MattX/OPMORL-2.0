@@ -8,8 +8,6 @@
  */
 
 #include "opmorl.h"
-#include "linkedlist.h"
-
 
 /**
  * Compute the level to which you fall if you jump into the collapsed floor at
@@ -194,7 +192,7 @@ int use_stairs(bool up)
 
 void add_permanent_effect(MixinType mixin)
 {
-    for (int i = 0; i < MAX_MIXIN; i++) {
+    for (int i = 0; i < NB_MIXIN; i++) {
         if (rodney.permanent_effects[i] == mixin)
             return;
         if (rodney.permanent_effects[i] == MT_NONE)
@@ -204,7 +202,7 @@ void add_permanent_effect(MixinType mixin)
 
 bool has_permanent_effect(MixinType mixin)
 {
-    for (int i = 0; i < MAX_MIXIN; i++) {
+    for (int i = 0; i < NB_MIXIN; i++) {
         if (rodney.permanent_effects[i] == mixin)
             return true;
     }

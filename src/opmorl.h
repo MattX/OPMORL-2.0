@@ -19,7 +19,7 @@
 #include <stdbool.h>
 #include <curses.h>
 
-#include "linkedlist.h"
+#include "lib.h"
 
 #define DEBUG
 
@@ -71,19 +71,10 @@ typedef enum e_color
  * attron(COLOR_PAIR(obj->color)); and attroff().	*/
 
 
-/**
- * Stores a coordinate
- */
-typedef struct s_coord
-{
-    int x; /** x coordinate */
-    int y; /** y coordinate */
-} Coord;
-
 /****** OBJECTS & object mixins ******/
 
 // Magic classes
-#define NB_MAGIC_CLASSES 6
+#define NB_MAGIC_CLASSES 4
 extern bool magic_class_strengths[NB_MAGIC_CLASSES][NB_MAGIC_CLASSES];
 extern char *magic_class_names[NB_MAGIC_CLASSES];
 extern char *magic_class_adjectives[NB_MAGIC_CLASSES];
@@ -91,8 +82,10 @@ extern Color magic_class_colors[NB_MAGIC_CLASSES];
 
 typedef enum
 {
-    MC_NEUTRAL = 0, MC_EVOK = 1, MC_EXOR = 2, MC_NECRO = 3, MC_ILLU = 4,
-    MC_TRANS = 5,
+    MC_NEUTRAL,
+    MC_EVOK,
+    MC_NECRO,
+    MC_PALLADIN,
 } MagicClassTag;
 
 
@@ -140,7 +133,7 @@ typedef struct
     Color color;
 } ObjectType;
 
-#define MAX_MIXIN 100
+
 typedef enum
 {
     MT_BG_HP,
@@ -178,6 +171,7 @@ typedef enum
     MT_US_ID,
     MT_NUM,
     MT_NONE,
+    NB_MIXIN,
 } MixinType; // To be able to quickly check a mixin
 
 typedef struct
@@ -215,24 +209,25 @@ void add_level_objects(int level);
 // For attacks and other monster properties
 typedef enum
 {
-    ATK_MELEE = 1 << 1,
-    ATK_FREEZE = 1 << 2,
-    ATK_FIRE = 1 << 3,
-    ATK_DISENCHANT = 1 << 4,
-    ATK_RAY = 1 << 5,
-    ATK_TP = 1 << 6,
-    ATK_INVIS = 1 << 7,
-    ATK_NO_MOVE = 1 << 8,    // Immobile monster
-    ATK_BLOWBACK = 1 << 9,
-    ATK_POLYSELF = 1 << 10,
-    ATK_DESTROY = 1 << 11,
-    ATK_CONJURE = 1 << 12,
-    ATK_EVOKE = 1 << 13,
-    ATK_LIFEFORCE = 1 << 14,
-    ATK_EXPDRAIN = 1 << 15,
-    ATK_TIMEOUT = 1 << 16,
-    ATK_DROP_SWAG = 1 << 17,
-} MonAtkType;
+    MTFLAG_ATK_MELEE = 1 << 1,
+    MTFLAG_ATK_FREEZE = 1 << 2,
+    MTFLAG_ATK_FIRE = 1 << 3,
+    MTFLAG_ATK_DISENCHANT = 1 << 4,
+    MTFLAG_ATK_RAY = 1 << 5,
+    MTFLAG_ATK_TP = 1 << 6,
+    MTFLAG_INVIS = 1 << 7,
+    MTFLAG_IMMOBILE = 1 << 8,    // Immobile monster
+    MTFLAG_BLOWBACK = 1 << 9,
+    MTFLAG_ATK_POLYSELF = 1 << 10,
+    MTFLAG_ATK_DESTROY = 1 << 11,
+    MTFLAG_ATK_CONJURE = 1 << 12,
+    MTFLAG_LEVITATE = 1 << 13,
+    MTFLAG_ATK_DRAIN_LIFEFORCE = 1 << 14,
+    MTFLAG_ATK_EXPDRAIN = 1 << 15,
+    MTFLAG_ATK_TIMEOUT = 1 << 16,
+    MTFLAG_DROP_SWAG = 1 << 17,
+    MTFLAG_NOGEN = 1 << 18,
+} MonTypeFlag;
 
 
 typedef enum
@@ -307,17 +302,19 @@ typedef struct
     bool bold;
     int prob;
     int difficulty;
-    int atk_types;
+    int flags;
     int power;
     int ac;
 } MonType; /* Monster type */
 
 typedef enum
 {
-    MF_INVISIBLE,
-    MF_ASLEEP,
-    MF_FROZEN,
-} MonFlags;
+    MF_INVISIBLE = 1 << 1,
+    MF_ASLEEP = 1 << 2,
+    MF_FROZEN = 1 << 3,
+    MF_LEVITATING = 1 << 4,
+    MF_POLY = 1 << 5,
+} MonFlag;
 
 typedef struct s_monster
 {
@@ -448,7 +445,7 @@ typedef struct
     Object *wielded;
     Object *helm;
     Object *body_armor;
-    MixinType permanent_effects[MAX_MIXIN];
+    MixinType permanent_effects[NB_MIXIN];
     int gold;
     int score;
     int ac;
@@ -495,22 +492,6 @@ void make_monsters(int dlvl, int nb);
 Monster *find_mon_at(int, Coord);
 
 LinkedList *find_objs_at(int, Coord);
-
-int rand_int(int, int);
-
-int ndn(int, int);
-
-int min(int, int);
-
-int max(int, int);
-
-int sign(int);
-
-int abs(int);
-
-double abs_d(double);
-
-void strncpy_pad(char *dest, const char *src, size_t n);
 
 int move_rodney(Coord to);
 
@@ -578,11 +559,7 @@ bool load_grid();
 
 void generate_level(int dlvl);
 
-Coord letter_to_direction(char);
-
 Coord get_direction();
-
-Coord coord_add(Coord, Coord);
 
 int toggle_door(Coord direction, bool open);
 

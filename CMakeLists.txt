@@ -11,6 +11,7 @@ find_package(Curses REQUIRED)
 include_directories(${CURSES_INCLUDE_DIR})
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -g -Wall")
+set(CMAKE_C_COMPILER "/usr/local/Cellar/gcc/6.3.0/bin/gcc-6")
 
 set(SOURCE_FILES
         src/init.c
@@ -22,8 +23,7 @@ set(SOURCE_FILES
         src/opmorl.c
         src/opmorl.h
         src/player.c
-        src/linkedlist.c
-        src/linkedlist.h
+        src/lib.h
         src/turn.c
         src/inv.c
         src/use.c)

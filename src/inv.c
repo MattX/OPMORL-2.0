@@ -113,9 +113,9 @@ int pickup()
     return elapsed;
 }
 
-/*
- * drop: Ask the player for an item to drop. Will return 1 if an item was
- * dropped or 0 if the player cancelled the action.
+/**
+ * Ask the player for an item to drop, and drop it. Will return 1 if an item
+ * was dropped or 0 if the player cancelled the action.
  */
 int drop()
 {
@@ -145,8 +145,8 @@ int drop()
     return elapsed;
 }
 
-/*
- * inventory: Display the player's inventory.
+/**
+ * Display the player's inventory.
  */
 void inventory()
 {
@@ -156,9 +156,9 @@ void inventory()
     delete_linked_list(inv);
 }
 
-/*
- * wield: Asks the player for an item to wield and weilds it if a proper choice
- * is made. Fails if something is already being weilded.
+/**
+ * Asks the player for an item to wield and weilds it if a proper choice is
+ * made. Fails if something is already being weilded.
  */
 int wield()
 {
@@ -184,8 +184,8 @@ int wield()
     }
 }
 
-/*
- * unwield: Un-wields the currently wielded item, if there is one.
+/**
+ * Un-wields the currently wielded item, if there is one.
  */
 int unwield()
 {
@@ -200,10 +200,10 @@ int unwield()
 }
 
 
-/*
- * ac_change: Returns the change in player AC when the object is put on/removed.
- * The value returned will be positive (ie it is the AC increase when the
- * object is removed).
+/**
+ * Returns the change in player AC when the object is put on/removed. The value
+ * returned will be positive (ie it is the AC increase when the object is
+ * removed).
  */
 int ac_change(Object *obj)
 {
@@ -215,8 +215,8 @@ int ac_change(Object *obj)
 }
 
 
-/*
- * wear: Asks for an item to wear, wears it if the selection is valid.
+/**
+ * Asks for an item to wear, wears it if the selection is valid.
  */
 int wear()
 {
@@ -263,8 +263,8 @@ int wear()
     return 0; // Should not reach;
 }
 
-/*
- * take_off_armor: Asks confirmation and removes armor.
+/**
+ * Asks confirmation and removes armor.
  */
 int take_off_armor()
 {
@@ -298,9 +298,8 @@ int take_off_armor()
     return 0; // Should not reach here
 }
 
-/*
- * has_inventory_effect: Returns whether an inventory object has the required
- * effect.
+/**
+ * Returns whether an inventory object has the required effect.
  */
 bool has_inventory_effect(MixinType effect)
 {

@@ -136,5 +136,7 @@ void process_turn(char c)
         recompute_visibility();
         turn++;
     }
+
+    line_needs_confirm = 0;
 }
 
