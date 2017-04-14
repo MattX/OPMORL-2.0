@@ -42,11 +42,18 @@ void show_env_messages()
 
 /**
  * Processes one (or more) full turns
- * @param c The command the player entered
  */
-void process_turn(char c)
+void process_turn()
 {
-    int turn_elapsed = 0;
+    int turns_elapsed = 0;
+    char c;
+
+    if (rodney.freeze_timeout > 0) {
+        c = '.'; // Force wait
+    } else {
+        c = get_input();
+        clear_msg_line();
+    }
 
     switch (c) {
     case 'h':
@@ -57,60 +64,59 @@ void process_turn(char c)
     case 'u':
     case 'b':
     case 'n':
-        turn_elapsed = process_move_input(c);
+        turns_elapsed = process_move_input(c);
         break;
     case '>':
-        turn_elapsed = use_stairs(0);
+        turns_elapsed = use_stairs(0);
         break;
     case '<':
-        turn_elapsed = use_stairs(1);
+        turns_elapsed = use_stairs(1);
         break;
     case ',':
-        turn_elapsed = pickup();
+        turns_elapsed = pickup();
         break;
     case 'd':
-        turn_elapsed = drop();
+        turns_elapsed = drop();
         break;
     case 'i':
         inventory();
         break;
     case 'w':
-        turn_elapsed = wield();
+        turns_elapsed = wield();
         break;
     case 'x':
-        turn_elapsed = unwield();
+        turns_elapsed = unwield();
         break;
     case 'W':
-        turn_elapsed = wear();
+        turns_elapsed = wear();
         break;
     case 'T':
-        turn_elapsed = take_off_armor();
+        turns_elapsed = take_off_armor();
         break;
     case '.':
-        turn_elapsed = true;
+        turns_elapsed = 1;
         break;
     case 'a':
-        turn_elapsed = use();
+        turns_elapsed = use();
         break;
     case 'z':
-        turn_elapsed = zap();
+        turns_elapsed = zap();
         break;
     case 'o':
-        turn_elapsed = toggle_door((Coord) {0, 0}, true);
+        turns_elapsed = toggle_door((Coord) {0, 0}, true);
         break;
     case 'c':
-        turn_elapsed = toggle_door((Coord) {0, 0}, false);
+        turns_elapsed = toggle_door((Coord) {0, 0}, false);
         break;
     case 't':
-        turn_elapsed = toggle_lever();
+        turns_elapsed = toggle_lever();
         break;
     case 'E':
-        turn_elapsed = teleport();
+        turns_elapsed = teleport();
         break;
 #ifdef DEBUG
     case 'L':
-        if (god_mode)
-            display_layout();
+        display_layout();
         break;
     case 'G':
         god_mode = !god_mode;
@@ -119,6 +125,9 @@ void process_turn(char c)
     case 'S':
         test_multiple_selection();
         break;
+    case 'F':
+        rodney.freeze_timeout = 10;
+        break;
 #endif
     case 'R':
         redrawwin(stdscr);
@@ -126,17 +135,15 @@ void process_turn(char c)
     case 'q':
         exit_game();
         break;
+    case 0:
     default:
         break;
     }
 
-    while (turn_elapsed--) {
-        move_monsters();
+    while (turns_elapsed--) {
+        tick_monsters();
         regain_hp();
         recompute_visibility();
         turn++;
     }
-
-    line_needs_confirm = 0;
 }
-

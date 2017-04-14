@@ -39,7 +39,7 @@ int main(void)
 void game_loop()
 {
     while (1) {
-        process_turn(get_input());
+        process_turn();
         display_everything();
     }
 }

@@ -155,6 +155,9 @@ Coord coord_add(Coord a, Coord b)
     return res;
 }
 
+
+/*** Linked list stuff ***/
+
 /**
  * Returns an empty allocated linked list
  */

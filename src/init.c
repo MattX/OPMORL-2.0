@@ -90,7 +90,7 @@ void exit_game() {
 #endif
 
     pline("Goodbye.");
-    getch();
+    get_input();
     exit_ncurses();
     exit(0);
 }
@@ -113,6 +113,7 @@ void init_game()
     rodney.hp = rodney.max_hp = 15;
     rodney.body_armor = rodney.wielded = rodney.helm = NULL;
     rodney.ac = 4;
+    rodney.freeze_timeout = 0;
 
     o_list = new_linked_list();
     m_list = new_linked_list();
@@ -147,7 +148,7 @@ void init_game()
     }
 
     rodney.dlvl = 0;
-    change_dlvl(0, T_STAIRS_UP);
+    change_dlvl(0, T_STAIRS_UP, true);
 
     pline("Welcome to OPMORL!");
     show_intro();

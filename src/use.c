@@ -31,7 +31,7 @@ int use_object(Object *object)
     IF_HAS(object, MT_US_LEVELPORT)
         int new_level = max(min(rand_int(rodney.dlvl - 2, rodney.dlvl + 2), 0),
                             DLVL_MAX - 1);
-        change_dlvl(new_level, -1);
+        change_dlvl(new_level, -1, false);
     }
     IF_HAS(object, MT_US_DIG)
         pline("In which direction [hjklyubn>]?");

@@ -222,7 +222,7 @@ typedef enum
     MTFLAG_ATK_DESTROY = 1 << 11,
     MTFLAG_ATK_CONJURE = 1 << 12,
     MTFLAG_LEVITATE = 1 << 13,
-    MTFLAG_ATK_DRAIN_LIFEFORCE = 1 << 14,
+    MTFLAG_ATK_SPELL = 1 << 14,
     MTFLAG_ATK_EXPDRAIN = 1 << 15,
     MTFLAG_ATK_TIMEOUT = 1 << 16,
     MTFLAG_DROP_SWAG = 1 << 17,
@@ -323,8 +323,8 @@ typedef struct s_monster
     Coord pos;
     int dlvl;
     int hp;
-    int timeout; /** How much time before unfreezing/waking/etc. */
-    int cooldown;
+    int spell_timeout; /** How much time before unfreezing/waking/etc. */
+    int freeze_timeout;
     int flags; /** Such as invisible, flying ... */
     Coord remembered_pos; /** Where the monster thinks the player is */
     bool remembered;
@@ -446,6 +446,7 @@ typedef struct
     Object *helm;
     Object *body_armor;
     MixinType permanent_effects[NB_MIXIN];
+    int freeze_timeout;
     int gold;
     int score;
     int ac;
@@ -499,7 +500,7 @@ int use_stairs(bool);
 
 void show_env_messages();
 
-void process_turn(char c);
+void process_turn();
 
 void init_mixins();
 
@@ -515,7 +516,7 @@ int drop();
 
 int rodney_attacks(Monster *target, bool melee);
 
-void move_monsters();
+void tick_monsters();
 
 bool check_dead(Monster *target, bool rodney_killed);
 
@@ -543,7 +544,7 @@ bool has_inventory_effect(MixinType effect);
 
 char *object_name(Object *obj);
 
-int change_dlvl(int, int);
+int change_dlvl(int, int, bool silent);
 
 int use();
 

@@ -1,14 +1,11 @@
 # Ideas for OPMORL
 
   * Dungeon forks? With sevral links from the main dungeon to the sub.
-  * Make maps a lot denser. The current generation algorithm doesn't
-    really make sense for a tower.
   * Beginning with few weapons, make the player focus on armor?
   * Constrain and make the player make choices => convoluted levels
     that take a long time to explore vs pressing food counter
   * Maybe some indications in a native language that the player
     gradually learns?
-  * Have a nice administrator name :)
 
 
 ## Immediate todos

@@ -66,7 +66,7 @@ void display_everything()
 
 
 /**
- * Return the appropriate glyph (-, | or +) to represent the wall at
+ * Return the appropriate glyph (- or |) to represent the wall at
  * (level, x, y).
  */
 char select_door_glyph(int dlvl, Coord pos)
@@ -194,7 +194,7 @@ void display_map()
     move(rodney.pos.x + 1, rodney.pos.y);
 }
 
-
+#ifdef DEBUG
 /**
  * Displays a map of the connected components on screen.
  */
@@ -216,6 +216,8 @@ void display_cc_map(int *components)
 
 }
 
+#endif
+
 /**
  * Display player stats at the bottom of the screen.
  */
@@ -234,13 +236,15 @@ void display_stats()
 }
 
 /**
- * Clear the message line on top of the screen.
+ * Clear the message line on top of the screen. Also marks the current line as not
+ * needing a confirmation.
  */
 void clear_msg_line()
 {
     move(0, 0);
     clrtoeol();
     last_col = -1;
+    line_needs_confirm = false;
 }
 
 /**
@@ -262,7 +266,7 @@ void va_pline(char *format, va_list args)
             mvprintw(0, last_col + 1, buf);
         } else {
             mvprintw(0, last_col + 1, " --more--");
-            getch();
+            get_input();
             line_needs_confirm = false;
         }
     }
@@ -337,7 +341,7 @@ bool get_point(Coord *selected)
     static int last_dlvl = -1;
 
     pline("Move cursor with movement keys. Use . , : or space to confirm, ESC to cancel.");
-    line_needs_confirm = 0;
+    line_needs_confirm = false;
 
     Coord cur;
     if (last_dlvl == rodney.dlvl) {
@@ -352,7 +356,7 @@ bool get_point(Coord *selected)
     int status = 0; /* 0: selecting, 1: selected, 2: canceled */
 
     while (!status) {
-        int c = getch();
+        int c = get_input();
 
         switch (c) {
         case '.':
@@ -388,8 +392,6 @@ bool get_point(Coord *selected)
     return status == 1 ? true : false;
 }
 
-
-// TODO: object selection window for several objects
 
 /**
  * Selects the next node with non-null element.
@@ -455,7 +457,6 @@ LinkedList *select_objects(LinkedList *objects, bool allow_multiple)
             pline("<space> for next page, <enter> to confirm, <esc> to cancel");
         else
             pline("<space> or <enter> to confirm, <esc> to cancel");
-        clrtoeol();
 
         while (1) {
             int selection = get_input();
@@ -463,7 +464,7 @@ LinkedList *select_objects(LinkedList *objects, bool allow_multiple)
                 // ESC pressed, return an empty list.
                 delete_linked_list(selected);
                 return new_linked_list();
-            } else if (selection == 10) {
+            } else if (selection == 10) { // Enter
                 return selected;
             } else if (selection == ' ') {
                 if (next_top != NULL)
@@ -497,6 +498,8 @@ LinkedList *select_objects(LinkedList *objects, bool allow_multiple)
                 pline("?");
         }
     }
+
+    line_needs_confirm = false; //
 
     return selected;
 }
@@ -614,7 +617,7 @@ void log_layout()
  */
 void display_layout()
 {
-    const char level_types[][100] = {
+    const char level_types[][50] = {
             "", "Archmage's garden", "Maintenance level",
             "Administrator's quarters", "Market", "Bank", "",
             "Barracks"
@@ -644,7 +647,6 @@ void display_layout()
 
 
 #ifdef DEBUG
-
 /**
  * Testing function for multiple selection
  */
@@ -666,5 +668,4 @@ void test_multiple_selection()
 
     delete_linked_list(selected);
 }
-
 #endif

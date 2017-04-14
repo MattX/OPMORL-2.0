@@ -69,7 +69,7 @@ int move_rodney(Coord to)
             pline("You fall through the collapsed floor.");
 
             rodney.pos = to;
-            if (change_dlvl(fall_level, -1))
+            if (change_dlvl(fall_level, -1, false))
                 take_damage((rodney.dlvl - fall_level) * 3);
             return 1;
         } else if (target_type == T_PORTCULLIS_DOWN) {
@@ -92,9 +92,11 @@ int move_rodney(Coord to)
  * @param tile_type The tile type on which the player should land. Should be
  * T_STAIRS_UP or T_STAIRS_DOWN, or -1, in which case the player will land
  * close to its current position.
+ * @param If true, will not print some messages. Used only for moving the player
+ * to the first level.
  * @return The number of turns the action took
  */
-int change_dlvl(int to_dlvl, int tile_type)
+int change_dlvl(int to_dlvl, int tile_type, bool silent)
 {
     Coord new;
     int found_tile;
@@ -140,6 +142,14 @@ int change_dlvl(int to_dlvl, int tile_type)
             return 0;
     }
 
+    if (!silent) {
+        if (tile_type == T_STAIRS_DOWN) {
+            pline("You walk up the stairs.");
+        } else if (tile_type == T_STAIRS_UP) {
+            pline("You walk down the stairs.");
+        }
+    }
+
     rodney.dlvl = to_dlvl;
     rodney.pos = new;
 
@@ -177,7 +187,7 @@ int use_stairs(bool up)
 
             return 0;
         } else {
-            return change_dlvl(rodney.dlvl - 1, T_STAIRS_DOWN);
+            return change_dlvl(rodney.dlvl - 1, T_STAIRS_DOWN, false);
         }
     } else {
         if (maps[rodney.dlvl][rodney.pos.x][rodney.pos.y] != T_STAIRS_DOWN &&
@@ -185,7 +195,7 @@ int use_stairs(bool up)
             pline("You can't go down here!");
             return 0;
         } else {
-            return change_dlvl(rodney.dlvl + 1, T_STAIRS_UP);
+            return change_dlvl(rodney.dlvl + 1, T_STAIRS_UP, false);
         }
     }
 }
@@ -265,7 +275,7 @@ bool player_has_effect(MixinType effect)
 
 
 /**
- * Regenerate Rodney's HP if required.
+ * Regenerate Rodney's HP if required, and lower the freeze timeout.
  */
 void regain_hp()
 {
@@ -279,6 +289,8 @@ void regain_hp()
     } else {
         turns_since_regain++;
     }
+
+    rodney.freeze_timeout = max(0, rodney.freeze_timeout - 1);
 }
 
 
@@ -301,6 +313,9 @@ void take_damage(int damage)
 }
 
 
+/**
+ * Increases Rodney's experience by a given amount against a given class.
+ */
 void gain_exp(int exp, MagicClassTag class)
 {
     rodney.magic_class_exp[class] += exp;
@@ -446,6 +461,7 @@ static void toggle_portcullis(int dlvl, Coord pos)
 int toggle_lever()
 {
     if (maps[rodney.dlvl][rodney.pos.x][rodney.pos.y] != T_LEVER) {
+        print_to_log("Tried to toggle nonexisting lever.\n");
         pline("You see no lever to toggle here.");
         return 0;
     }
@@ -463,7 +479,7 @@ int toggle_lever()
 
     if (lever_descriptor == NULL) {
         if (dlvl_types[rodney.dlvl] == DLVL_ADMINISTRATOR) {
-            // On the administrator level, an unregistered level is probably the
+            // On the administrator level, an unregistered lever is probably the
             // administrator's.
             pline("You hear a the sound of a gigantic pump starting up.");
             for (int i = 0; i < DLVL_MAX; i++) {

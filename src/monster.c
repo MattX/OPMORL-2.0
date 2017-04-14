@@ -95,7 +95,7 @@ void init_monster_types()
             MTFLAG_ATK_MELEE | MTFLAG_ATK_RAY, 7, 7, 'L',
             false, 80);
     MONSTER(MON_ARCH_LICH, "fucking arch-lich", MC_NECRO, 60, -1,
-            MTFLAG_ATK_MELEE | MTFLAG_ATK_RAY | MTFLAG_ATK_DRAIN_LIFEFORCE |
+            MTFLAG_ATK_MELEE | MTFLAG_ATK_RAY | MTFLAG_ATK_SPELL |
             MTFLAG_ATK_EXPDRAIN, 10, 15, 'L',
             true, 2);
     MONSTER(MON_UNDEAD_GOLEM, "undead golem", MC_NECRO, 30, 2, MTFLAG_ATK_MELEE,
@@ -115,7 +115,7 @@ void init_monster_types()
             5, 'D',
             false, 80);
     MONSTER(MON_DEMON_KING, "demon king", MC_NECRO, 50, 0,
-            MTFLAG_ATK_MELEE | MTFLAG_ATK_DRAIN_LIFEFORCE, 9, 11, 'D', true,
+            MTFLAG_ATK_MELEE | MTFLAG_ATK_SPELL, 9, 11, 'D', true,
             80);
     MONSTER(MON_ANGEL, "angel", MC_PALLADIN, 30, 0,
             MTFLAG_ATK_MELEE | MTFLAG_ATK_TP, 6, 7, 'A',
@@ -130,10 +130,10 @@ void init_monster_types()
             false,
             80);
     MONSTER(MON_GREATER_MINION, "greater minion", MC_NECRO, 50, 0,
-            MTFLAG_ATK_MELEE | MTFLAG_ATK_DRAIN_LIFEFORCE, 9, 11, 'M', true,
+            MTFLAG_ATK_MELEE | MTFLAG_ATK_SPELL, 9, 11, 'M', true,
             80);
     MONSTER(MON_TT, "tt", MC_NECRO, 75, -6,
-            MTFLAG_ATK_MELEE | MTFLAG_ATK_RAY | MTFLAG_ATK_DRAIN_LIFEFORCE |
+            MTFLAG_ATK_MELEE | MTFLAG_ATK_RAY | MTFLAG_ATK_SPELL |
             MTFLAG_ATK_EXPDRAIN, 15, 25, '@',
             true, 0);
     MONSTER(MON_ESTEBAN, "esteban", MC_PALLADIN, 75, -6,
@@ -177,7 +177,7 @@ void init_monster_types()
             MTFLAG_ATK_MELEE | MTFLAG_ATK_RAY, 7, 5, 'S', false,
             80);
     MONSTER(MON_GHOST, "ghost", MC_NECRO, 50, 0,
-            MTFLAG_ATK_MELEE | MTFLAG_ATK_DRAIN_LIFEFORCE | MTFLAG_ATK_TIMEOUT,
+            MTFLAG_ATK_MELEE | MTFLAG_ATK_SPELL | MTFLAG_ATK_TIMEOUT,
             9, 11, 'S', true, 80);
     MONSTER(MON_ELF, "elf", MC_PALLADIN, 20, 4, MTFLAG_ATK_MELEE, 4,
             2, 'e', false, 80);
@@ -269,8 +269,8 @@ void make_monsters(int dlvl, int nb)
         mon->type = &monster_types[choose_montype(dlvl)];
         mon->flags = 0;
         mon->hp = mon->type->max_hp;
-        mon->timeout = 0;
-        mon->cooldown = 0;
+        mon->freeze_timeout = 0;
+        mon->spell_timeout = 0;
         mon->remembered = false;
         mon->remembered_pos = (Coord) {0, 0};
 
@@ -321,6 +321,9 @@ bool check_dead(Monster *target, bool rodney_killed)
     if (rodney_killed) {
         rodney.magic_class_exp[target->type->magic_class] +=
                 10 * target->type->difficulty;
+        pline("You kill the %s.", target->type->name);
+    } else {
+        pline("The %s is killed.", target->type->name);
     }
     delete_from_linked_list(m_list, target);
     free(target);
@@ -328,12 +331,13 @@ bool check_dead(Monster *target, bool rodney_killed)
     return true;
 }
 
-/*
- * Have a monster hit the player in melee.
+/**
+ * Have a monster hit the player in melee. Assumes the player can move and
+ * it placed right to hit.
  */
-void mon_attack_melee(Monster *mon)
+void mon_melee_attack(Monster *mon)
 {
-    if (ndn(2, 10) > 10 - rodney.ac + mon->type->difficulty) {
+    if (ndn(mon->type->difficulty, 3) < 10 - rodney.ac) {
         pline("The %s hits!", mon->type->name);
         take_damage(ndn(3, mon->type->power / 3) - 2);
     } else {
@@ -341,13 +345,55 @@ void mon_attack_melee(Monster *mon)
     }
 
     if (mon->type->flags & MTFLAG_ATK_FREEZE) {
-        if (rand_int(1, 10) == 3) {
+        if (rand_int(1, 10) == 1) {
             pline("The %s freezes you!", mon->type->name);
-            // TODO: implement :)
+            rodney.freeze_timeout += ndn(10, 10);
         }
     }
 }
 
+
+/**
+ * Have a monster attack the player in a ranged attack. Assumes the monster
+ * has a line of sight to the player, and that it is currently able to hit.
+ */
+void mon_ranged_attack(Monster *mon)
+{
+    if (ndn(mon->type->difficulty, 3) < 10 - rodney.ac) {
+        pline("The %s casts a spell. The bolt hits you!", mon->type->name);
+        take_damage(ndn(3, mon->type->power / 3) - 2);
+    } else {
+        pline("The %s casts a spell. The bolt whizzes by you.", mon->type->name);
+    }
+}
+
+
+/**
+ * Tries to make a monster attack. Returns true iff it was possible and the
+ * monster attacked.
+ */
+bool monster_attack(Monster *mon)
+{
+    // Try to attack in melee
+    for (int i_direction = 0; i_direction < 8; i_direction++) {
+        Coord neighbor = get_neighbor(mon->pos, i_direction);
+        if (!valid_coordinates(neighbor))
+            continue;
+        if (neighbor.x == rodney.pos.x && neighbor.y == rodney.pos.y) {
+            mon_melee_attack(mon);
+            return true;
+        }
+    }
+
+    // Try to do a ranged attack
+    if (mon->type->flags & MTFLAG_ATK_SPELL && mon->spell_timeout < 0) {
+        if (is_visible(rodney.dlvl, mon->pos, rodney.pos, NULL, false)) {
+            mon_ranged_attack(mon);
+        }
+    }
+
+    return false;
+}
 
 /**
  * Make a monster act for the turn: give it a chance to attack, or move it
@@ -355,7 +401,7 @@ void mon_attack_melee(Monster *mon)
  * towards him, others will simply wander around.
  * This function assumes the monster is able to move.
  */
-void move_monster(Monster *mon)
+void monster_move(Monster *mon)
 {
     Coord target;
     Coord new;
@@ -388,17 +434,6 @@ void move_monster(Monster *mon)
         target = mon->remembered_pos;
     }
 
-    // Try to attack in melee
-    for (int i_direction = 0; i_direction < 8; i_direction++) {
-        Coord neighbor = get_neighbor(mon->pos, i_direction);
-        if (!valid_coordinates(neighbor))
-            continue;
-        if (neighbor.x == rodney.pos.x && neighbor.y == rodney.pos.y) {
-            mon_attack_melee(mon);
-            return;
-        }
-    }
-
     /* First try finding a path clear of monsters; if it fails, try to
      * find a path with monsters */
     if (dijkstra(rodney.dlvl, mon->pos, target, &new, false) ||
@@ -411,23 +446,30 @@ void move_monster(Monster *mon)
 
 
 /**
- * Move each monster on the level and get them a chance to
- * attack. Only monsters that are on the current level, that can move,
- * and that are not frozen/etc. will do something.
+ * Move each monster on the level and get them a chance to attack. Only
+ * monsters that are on the current level, that can move, and that are not
+ * frozen/etc. will do something. Cooldowns will be decreased.
  */
-void move_monsters()
+void tick_monsters()
 {
     LinkedListNode *cur_node;
     Monster *mon;
 
     for (cur_node = m_list->head; cur_node != NULL; cur_node = cur_node->next) {
         mon = cur_node->element;
-        if (mon->dlvl != rodney.dlvl)
+        if (mon->dlvl != rodney.dlvl || mon->type->flags & MTFLAG_IMMOBILE)
             continue;
 
-        if (mon->flags & MF_FROZEN || mon->type->flags & MTFLAG_IMMOBILE)
-            continue;
+        if (mon->freeze_timeout > 0) {
+            mon->freeze_timeout--;
+        } else {
+            mon->flags &= ~MF_FROZEN;
+        }
 
-        move_monster(mon);
+        if (mon->spell_timeout > 0)
+            mon->spell_timeout--;
+
+        if (!monster_attack(mon))
+            monster_move(mon);
     }
 }
